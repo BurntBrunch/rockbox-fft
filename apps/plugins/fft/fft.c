@@ -137,7 +137,7 @@ PLUGIN_HEADER
 #endif
 
 #define FFTR
-#define FFT_SIZE 512
+#define FFT_SIZE 1024
 
 #ifdef FFTR /* Real numbers FFT */
 #   define ARRAYSIZE_IN FFT_SIZE
@@ -167,7 +167,7 @@ typedef kiss_fft_cfg   fft_cfg;
 #endif
 
 static kiss_fft_cpx fft[ARRAYSIZE_OUT];
-static int32_t magnitudes[ARRAYSIZE_OUT];
+static kiss_fft_scalar magnitudes[ARRAYSIZE_OUT];
 static char mem[BUFSIZE];
 
 /* Plotting functions (modes) */
@@ -206,17 +206,32 @@ int32_t calc_magnitudes(void)
 	int32_t max = 0;
 	for(i=0; i<ARRAYSIZE_OUT; ++i)
 	{
-		tmp = Q15_MUL( ((int32_t) fft[i].r) << 15, ((int32_t) fft[i].r) << 15);
-		tmp += Q15_MUL(((int32_t) fft[i].i) << 15, ((int32_t) fft[i].i)<< 15);
-		tmp = fsqrt(tmp, 15);
-		tmp += (1 << 14); /* round up, we're discarding the fractional part anyway */
-		magnitudes[i] = tmp >> 15;
+		tmp = Q_MUL( ((int32_t) fft[i].r) << 16, ((int32_t) fft[i].r) << 16, 16);
+		tmp += Q_MUL(((int32_t) fft[i].i) << 16, ((int32_t) fft[i].i) << 16, 16);
+		tmp = fsqrt(tmp, 13);
+		magnitudes[i] = tmp >> 16;
 
 		if (magnitudes[i] > max)
 			max = magnitudes[i];
 	}
 	return max;
 }
+
+int32_t calc_real(void)
+{
+	size_t i;
+
+	int32_t max = 0;
+	for(i=0; i<ARRAYSIZE_OUT; ++i)
+	{
+		magnitudes[i] = fft[i].r;
+
+		if (magnitudes[i] > max)
+			max = magnitudes[i];
+	}
+	return max;
+}
+
 
 void draw_lines(void)
 {
@@ -339,6 +354,15 @@ enum plugin_status plugin_start(const void* parameter)
 	 * next_update work is done in draw() */
 	next_update = *rb->current_tick + HZ/REFRESH_RATE;
 
+	size_t size = sizeof(mem);
+	kiss_fftr_cfg state = kiss_fftr_alloc(FFT_SIZE, 0,mem,&size);
+
+	if(state == 0)
+	{
+		DEBUGF("needed data: %i", (int)size);
+		return PLUGIN_ERROR;
+	}
+
 	while(run)
 	{
 		kiss_fft_scalar left, right;
@@ -367,7 +391,8 @@ enum plugin_status plugin_start(const void* parameter)
 #ifdef FFTR
 			data[fft_idx] = left/2 + right/2;
 #else
-			data[fft_idx].r = left/2 + right/2;
+			data[fft_idx].r = left;
+			data[fft_idx].i = right;
 #endif
     		fft_idx++;
 
@@ -377,15 +402,6 @@ enum plugin_status plugin_start(const void* parameter)
 
 		if(fft_idx == ARRAYSIZE_IN)
 		{
-			size_t size = sizeof(mem);
-			kiss_fftr_cfg state = kiss_fftr_alloc(FFT_SIZE, 0,mem,&size);
-
-			if(state == 0)
-			{
-			    DEBUGF("needed data: %i", (int)size);
-				return PLUGIN_ERROR;
-		    }
-
 			kiss_fftr(state, data, fft);
 			draw(mode);
 
@@ -400,7 +416,6 @@ enum plugin_status plugin_start(const void* parameter)
 			/* rotate through all the modes */
 			case FFT_MODE: mode += 1; if(mode > MODES) mode = 1; draw(mode); break;
 		}
-
 	}
     return PLUGIN_OK;
 }

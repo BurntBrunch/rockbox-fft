@@ -28,9 +28,6 @@ static size_t ntmpbuf=0;
         if ( nbuf < (size_t)(n) ) {\
         	DEBUGF("CHECKBUF NOT IMPLEMENTED!");\
         	break;\
-            /*free(buf); \
-            buf = (kiss_fft_cpx*)KISS_FFT_MALLOC(sizeof(kiss_fft_cpx)*(n)); \
-            nbuf = (size_t)(n); \*/ \
         } \
    }while(0)
 
@@ -365,20 +362,21 @@ kiss_fft_cfg kiss_fft_alloc(int nfft,int inverse_fft,void * mem,size_t * lenmem 
         *lenmem = memneeded;
     }
     if (st) {
-        int i;
-        st->nfft=nfft;
-        st->inverse = inverse_fft;
+		int i;
+		st->nfft=nfft;
+		st->inverse = inverse_fft;
 
-        for (i=0;i<nfft;++i) {
-            const double pi=3.141592653589793238462643383279502884197169399375105820974944;
-            double phase = -2*pi*i / nfft;
-            if (st->inverse)
-                phase *= -1;
-            kf_cexp(st->twiddles+i, phase );
-        }
+		for (i=0;i<nfft;++i) {
+			/* const double pi=3.141592653589793238462643383279502884197169399375105820974944;
+			double phase = -2*pi*i / nfft; */
+			if (st->inverse)
+				DEBUGF("Inverse FFT not implemented!"); /* kf_cexp(st->twiddles+i, -1*i, nfft ); */
+			else
+				kf_cexp( st->twiddles+i, i, nfft );
+		}
 
-        kf_factor(nfft,st->factors);
-    }
+		kf_factor(nfft,st->factors);
+	}
     return st;
 }
 

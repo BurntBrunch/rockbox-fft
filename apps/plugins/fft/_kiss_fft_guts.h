@@ -126,20 +126,17 @@ struct kiss_fft_state{
 
 
 #ifdef FIXED_POINT
-#  define KISS_FFT_COS(phase)  /* floor(.5+SAMP_MAX * cos (phase)) */
-#  define KISS_FFT_SIN(phase)  floor(.5+SAMP_MAX * sin (phase))
 #  define HALF_OF(x) ((x)>>1)
 #else
-#  define KISS_FFT_COS(phase) (kiss_fft_scalar) cos(phase)
-#  define KISS_FFT_SIN(phase) (kiss_fft_scalar) sin(phase)
 #  define HALF_OF(x) ((x)*.5)
 #endif
 
-#define  kf_cexp(x,phase) \
+#define  kf_cexp(x, k, n) \
 	do{ \
-		long cos, sin = fsincos((uint32_t)phase * 0xffffffff, &cos); \
-		(x)->r = Q15_MUL(SAMP_MAX << 15, sin >> 16) >> 15; \
-		(x)->i = Q15_MUL(SAMP_MAX << 15, cos >> 16) >> 15;\
+		int32_t div = Q_DIV( (k) << 16, (n) << 16, 16 ); \
+		long cos, sin = fsincos(div << 16, &cos); \
+		(x)->r = ( Q_MUL(SAMP_MAX << 16, cos >> 15, 16) ) >> 16; \
+		(x)->i = ( Q_MUL(SAMP_MAX << 16, -1*(sin >> 15), 16) ) >> 16; \
 	}while(0)
 
 
