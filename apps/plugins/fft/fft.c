@@ -19,9 +19,6 @@
  *
  ****************************************************************************/
 #include "plugin.h"
-#define FIXED_POINT 16
-#include "kiss_fftr.h"
-#include "_kiss_fft_guts.h" /* sizeof(struct kiss_fft_state) */
 
 #include "lib/helper.h"
 #include "math.h"
@@ -136,39 +133,50 @@ PLUGIN_HEADER
 #error No keymap defined!
 #endif
 
-#define FFTR
-#define FFT_SIZE 1024
+
+#define FFT_SIZE (1024)
+
+#ifdef FFTR
+#	include "kiss_fftr.h"
+#else
+#	include "kiss_fft.h"
+#endif
+
+#include "_kiss_fft_guts.h" /* sizeof(struct kiss_fft_state) */
 
 #ifdef FFTR /* Real numbers FFT */
 #   define ARRAYSIZE_IN FFT_SIZE
 #   define ARRAYSIZE_OUT (FFT_SIZE/2)
+#	define ARRAYSIZE_PLOT ARRAYSIZE_OUT
+
 #   define BUFSIZE (sizeof(struct kiss_fftr_state) + \
 (sizeof(struct kiss_fft_state) + sizeof(kiss_fft_cpx)*(FFT_SIZE-1)) + \
 sizeof(kiss_fft_cpx) * ( FFT_SIZE * 3 / 2))
 
-#define fft_alloc kiss_fftr_alloc;
-#define fft_fft   kiss_fftr;
-typedef kiss_fftr_cfg   fft_cfg;
+#define fft_alloc kiss_fftr_alloc
+#define fft_fft   kiss_fftr
+#define fft_cfg   kiss_fftr_cfg
 
 #else /* Normal FFT */
 #   define ARRAYSIZE_IN FFT_SIZE
 #   define ARRAYSIZE_OUT FFT_SIZE
+#	define ARRAYSIZE_PLOT FFT_SIZE/2
 #   define BUFSIZE (sizeof(struct kiss_fft_state) + \
 sizeof(kiss_fft_cpx)*(FFT_SIZE-1))
-#define fft_alloc kiss_fft_alloc;
-#define fft_fft   kiss_fft;
-typedef kiss_fft_cfg   fft_cfg;
+#define fft_alloc kiss_fft_alloc
+#define fft_fft   kiss_fft
+#define fft_cfg   kiss_fft_cfg
 #endif
 
 #ifdef FFTR
-    static kiss_fft_scalar data[ARRAYSIZE_IN];
+    static kiss_fft_scalar input[ARRAYSIZE_IN];
 #else
-    static kiss_fft_cpx data[ARRAYSIZE_IN];
+    static kiss_fft_cpx input[ARRAYSIZE_IN];
 #endif
 
-static kiss_fft_cpx fft[ARRAYSIZE_OUT];
-static kiss_fft_scalar magnitudes[ARRAYSIZE_OUT];
-static char mem[BUFSIZE];
+static kiss_fft_cpx output[ARRAYSIZE_OUT];
+static kiss_fft_scalar plot[ARRAYSIZE_PLOT];
+static char buffer[BUFSIZE];
 
 /* Plotting functions (modes) */
 
@@ -184,9 +192,9 @@ void draw(char mode)
 {
 	switch(mode)
 	{
-		case 1: draw_lines();break;
-		case 2: draw_bars(); break;
-		default: draw_lines();
+		default:
+		case 1: {draw_lines(); break;}
+		case 2: {draw_bars(); break;}
 	}
 
 	/* we still have time in our time slot, so we sleep() */
@@ -204,42 +212,29 @@ int32_t calc_magnitudes(void)
 	size_t i;
 
 	int32_t max = 0;
-	for(i=0; i<ARRAYSIZE_OUT; ++i)
+	/* DEBUGF("Magnitudes: "); */
+	for(i=0; i<ARRAYSIZE_PLOT; ++i)
 	{
-		tmp = Q_MUL( ((int32_t) fft[i].r) << 16, ((int32_t) fft[i].r) << 16, 16);
-		tmp += Q_MUL(((int32_t) fft[i].i) << 16, ((int32_t) fft[i].i) << 16, 16);
-		tmp = fsqrt(tmp, 13);
-		magnitudes[i] = tmp >> 16;
+		tmp = Q_MUL( ((int32_t) output[i].r) << 16, ((int32_t) output[i].r) << 16, 16);
+		tmp += Q_MUL(((int32_t) output[i].i) << 16, ((int32_t) output[i].i) << 16, 16);
+		/* tmp = fsqrt(tmp, 13); */
+		plot[i] = tmp >> 16;
 
-		if (magnitudes[i] > max)
-			max = magnitudes[i];
+		/* DEBUGF("%i ", plot[i]); */
+		if (plot[i] > max)
+			max = plot[i];
 	}
+	/* DEBUGF("\n"); */
 	return max;
 }
-
-int32_t calc_real(void)
-{
-	size_t i;
-
-	int32_t max = 0;
-	for(i=0; i<ARRAYSIZE_OUT; ++i)
-	{
-		magnitudes[i] = fft[i].r;
-
-		if (magnitudes[i] > max)
-			max = magnitudes[i];
-	}
-	return max;
-}
-
 
 void draw_lines(void)
 {
 	static int max = 0;
 
-	static const int32_t hfactor = Q15_DIV(LCD_WIDTH << 15, ARRAYSIZE_OUT << 15),
+	static const int32_t hfactor = Q15_DIV(LCD_WIDTH << 15, (ARRAYSIZE_PLOT) << 15),
 						 hfactorw = hfactor >> 15,
-						 bins_per_pixel = ARRAYSIZE_OUT/LCD_WIDTH;
+						 bins_per_pixel = (ARRAYSIZE_PLOT)/LCD_WIDTH;
 
 	int32_t new_max = calc_magnitudes();
 	if(new_max > max)
@@ -253,20 +248,21 @@ void draw_lines(void)
 
 	/* take the average of neighboring bins if we have to scale the graph horizontally */
 	int32_t bins_avg=0; bool draw = true;
-	for(i=0; i< ARRAYSIZE_OUT; ++i)
+	for(i=0; i< ARRAYSIZE_PLOT; ++i)
 	{
 		int32_t x=0, y=0;
 
 		x = Q15_MUL(hfactor, i << 15) >> 15;
 
-		if (hfactorw == 0 && bins_per_pixel > 0) /* graph compression */
+		if (hfactorw == 0) /* graph compression */
 		{
 			draw = false;
-			bins_avg += magnitudes[i];
+			bins_avg += plot[i];
 
 			/* fix the division by zero warning:
 			 * bins_per_pixel is zero when the graph is expanding,
-			 * but won't even reach this point =/
+			 * but execution won't even reach this point - this is a dummy constant
+			 * to suppress the division by zero warning
 			 */
 			const int32_t div = bins_per_pixel > 0 ? bins_per_pixel : 1;
 			if((i+1) % div == 0)
@@ -280,7 +276,7 @@ void draw_lines(void)
 		}
 		else
 		{
-			y = Q15_MUL(vfactor, magnitudes[i] << 15) >> 15;
+			y = Q15_MUL(vfactor, plot[i] << 15) >> 15;
 			draw = true;
 		}
 
@@ -292,15 +288,15 @@ void draw_lines(void)
 
 void draw_bars(void)
 {
-	static const unsigned int bars = 8, border = 4, items = ARRAYSIZE_OUT/bars, width = (LCD_WIDTH - ((bars-1)*border)) / bars;
+	static const unsigned int bars = 12, border = 3, items = ARRAYSIZE_PLOT/bars, width = (LCD_WIDTH - ((bars-1)*border)) / bars;
 
 	calc_magnitudes();
 
 	unsigned int bars_values[bars], bars_idx = 0, bars_max=0;
 	unsigned int i, avg=0;
-	for(i=0; i<ARRAYSIZE_OUT; ++i)
+	for(i=0; i<ARRAYSIZE_PLOT; ++i)
 	{
-		avg += magnitudes[i];
+		avg += plot[i];
 		if((i+1)%items == 0)
 		{
 			/* Calculate the average value and keep the fractional part
@@ -354,8 +350,8 @@ enum plugin_status plugin_start(const void* parameter)
 	 * next_update work is done in draw() */
 	next_update = *rb->current_tick + HZ/REFRESH_RATE;
 
-	size_t size = sizeof(mem);
-	kiss_fftr_cfg state = kiss_fftr_alloc(FFT_SIZE, 0,mem,&size);
+	size_t size = sizeof(buffer);
+	fft_cfg state = fft_alloc(FFT_SIZE, 0,buffer,&size);
 
 	if(state == 0)
 	{
@@ -363,21 +359,23 @@ enum plugin_status plugin_start(const void* parameter)
 		return PLUGIN_ERROR;
 	}
 
+	/* taken out of the main loop for efficiency (?)*/
+	kiss_fft_scalar left, right;
+	kiss_fft_scalar* value;
+	int count;
+
 	while(run)
 	{
-		kiss_fft_scalar left, right;
-		int count;
-		void* buffer = (void*) rb->pcm_get_peak_buffer(&count);
-
-		if (buffer == 0 || count == 0)
+		value = (kiss_fft_scalar*) rb->pcm_get_peak_buffer(&count);
+		DEBUGF("%i in buffer\n", count);
+		if (value == 0 || count == 0)
 		{
-#ifdef SIMULATOR
-			rb->sleep(HZ/500); /* 2ms - needed to make SDL happy */
+#if defined(SIMULATOR)
+			rb->sleep(HZ/250); /* 4ms - needed to make SDL happy */
 #endif
 		    continue;
 	    }
 
-        kiss_fft_scalar* value = (kiss_fft_scalar*) buffer;
         int idx=0; /* offset in the buffer */
         int fft_idx=0;
 
@@ -389,11 +387,12 @@ enum plugin_status plugin_start(const void* parameter)
 			right = *(value+idx);
 			idx += 2;
 #ifdef FFTR
-			data[fft_idx] = left/2 + right/2;
+			input[fft_idx] = left/2 + right/2;
 #else
-			data[fft_idx].r = left;
-			data[fft_idx].i = right;
+			input[fft_idx].r = left;
+			input[fft_idx].i = right;
 #endif
+			/* DEBUGF("%i/%i samples collected\n", fft_idx+1, ARRAYSIZE_IN); */
     		fft_idx++;
 
     		if(fft_idx == ARRAYSIZE_IN)
@@ -402,7 +401,7 @@ enum plugin_status plugin_start(const void* parameter)
 
 		if(fft_idx == ARRAYSIZE_IN)
 		{
-			kiss_fftr(state, data, fft);
+			fft_fft(state, input, output);
 			draw(mode);
 
 			fft_idx = 0;
@@ -417,5 +416,6 @@ enum plugin_status plugin_start(const void* parameter)
 			case FFT_MODE: mode += 1; if(mode > MODES) mode = 1; draw(mode); break;
 		}
 	}
+	backlight_use_settings();
     return PLUGIN_OK;
 }
