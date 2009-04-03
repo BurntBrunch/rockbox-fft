@@ -216,7 +216,7 @@ int32_t get_log_value(int32_t value, bool fraction)
     return result;
 }
 
-void apply_windowing_func(void)
+void apply_window_func(void)
 {
     const int32_t hamming_a = float_q(0.53836, 16), hamming_b =
             float_q(0.46164, 16);
@@ -545,7 +545,7 @@ enum plugin_status plugin_start(const void* parameter)
 
         if (fft_idx == ARRAYSIZE_IN)
         {
-            apply_windowing_func();
+            apply_window_func();
             fft_fft(state, input, output);
             draw(mode, 0);
 
