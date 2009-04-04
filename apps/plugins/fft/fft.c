@@ -172,9 +172,9 @@ PLUGIN_HEADER
 (sizeof(struct kiss_fft_state) + sizeof(kiss_fft_cpx)*(FFT_SIZE-1)) + \
 sizeof(kiss_fft_cpx) * ( FFT_SIZE * 3 / 2))
 
-#define fft_alloc kiss_fftr_alloc
-#define fft_fft   kiss_fftr
-#define fft_cfg   kiss_fftr_cfg
+#define FFT_ALLOC kiss_fftr_alloc
+#define FFT_FFT   kiss_fftr
+#define FFT_CFG   kiss_fftr_cfg
 
 #else /* Normal FFT */
 #   define ARRAYSIZE_IN FFT_SIZE
@@ -182,9 +182,9 @@ sizeof(kiss_fft_cpx) * ( FFT_SIZE * 3 / 2))
 #	define ARRAYSIZE_PLOT FFT_SIZE/2
 #   define BUFSIZE (sizeof(struct kiss_fft_state) + \
 sizeof(kiss_fft_cpx)*(FFT_SIZE-1))
-#define fft_alloc kiss_fft_alloc
-#define fft_fft   kiss_fft
-#define fft_cfg   kiss_fft_cfg
+#define FFT_ALLOC kiss_fft_alloc
+#define FFT_FFT   kiss_fft
+#define FFT_CFG   kiss_fft_cfg
 #endif
 
 #ifdef FFTR
@@ -274,7 +274,7 @@ int32_t calc_magnitudes(bool logarithmic)
 const unsigned char* modes_text[] = { "Lines", "Bars" };
 const unsigned char* scales_text[] = { "Linear scale", "Logarithmic scale" };
 #define MODES_COUNT 2
-#define REFRESH_RATE 10
+#define REFRESH_RATE 20
 
 struct {
     bool logarithmic;
@@ -449,6 +449,9 @@ void draw_bars(void)
         }
     }
 
+    if(bars_max == 0) /* nothing to draw */
+        return;
+
     /* Give the graph some headroom */
     bars_max = Q15_MUL(bars_max, float_q15(1.1));
 
@@ -463,9 +466,17 @@ void draw_bars(void)
         int x = (i) * (border + width);
         int y;
         if (graph_settings.logarithmic)
-            y = Q_MUL(vfactor, bars_values[i], 16) >> 16;
+        {
+            y = Q_MUL(vfactor, bars_values[i], 16);
+            y += (1 << 15);
+            y >>= 16;
+        }
         else
-            y = Q15_MUL(vfactor, bars_values[i]) >> 15;
+        {
+            y = Q15_MUL(vfactor, bars_values[i]);
+            y += (1 << 14);
+            y >>= 15;
+        }
 
         rb->lcd_fillrect(x, LCD_HEIGHT - y, width, y);
     }
@@ -489,14 +500,14 @@ enum plugin_status plugin_start(const void* parameter)
     bool run = true;
     int mode = 0;
     graph_settings.logarithmic = true;
-    graph_settings.colored = false;
+    graph_settings.colored = false; /* doesn't do anything yet*/
 
     /* set the end of the first time slot - rest of the
      * next_update work is done in draw() */
     next_update = *rb->current_tick + HZ / REFRESH_RATE;
 
     size_t size = sizeof(buffer);
-    fft_cfg state = fft_alloc(FFT_SIZE, 0, buffer, &size);
+    FFT_CFG state = FFT_ALLOC(FFT_SIZE, 0, buffer, &size);
 
     if (state == 0)
     {
@@ -514,14 +525,12 @@ enum plugin_status plugin_start(const void* parameter)
         value = (kiss_fft_scalar*) rb->pcm_get_peak_buffer(&count);
         if (value == 0 || count == 0)
         {
-#if defined(SIMULATOR)
-            rb->sleep(HZ / 250); /* 4ms - needed to make SDL happy */
-#endif
+            rb->yield();
             continue;
         }
 
         int idx = 0; /* offset in the buffer */
-        int fft_idx = 0;
+        int fft_idx = 0; /* offset in input */
 
         do
         {
@@ -536,7 +545,6 @@ enum plugin_status plugin_start(const void* parameter)
             input[fft_idx].r = left;
             input[fft_idx].i = right;
 #endif
-            /* DEBUGF("%i/%i samples collected\n", fft_idx+1, ARRAYSIZE_IN); */
             fft_idx++;
 
             if (fft_idx == ARRAYSIZE_IN)
@@ -546,7 +554,11 @@ enum plugin_status plugin_start(const void* parameter)
         if (fft_idx == ARRAYSIZE_IN)
         {
             apply_window_func();
-            fft_fft(state, input, output);
+
+            /* Play nice - the sleep at the end of draw()
+             * only tries to maintain the frame rate */
+            rb->yield();
+            FFT_FFT(state, input, output);
             draw(mode, 0);
 
             fft_idx = 0;
