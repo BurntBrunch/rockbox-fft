@@ -173,6 +173,12 @@ PLUGIN_HEADER
 
 #define FFT_SIZE (1024)
 
+#if LCD_DEPTH > 1
+#   ifdef HAVE_LCD_COLOR
+#       define FG_GREEN LCD_RGBPACK(128, 255, 0)
+#   endif
+#endif
+
 #ifdef FFTR
 #	include "kiss_fftr.h"
 #else
@@ -296,9 +302,202 @@ const unsigned char* scales_text[] = { "Linear scale", "Logarithmic scale" };
 
 struct {
     bool logarithmic;
-    bool colored;
     bool orientation_vertical;
+#ifdef HAVE_LCD_COLOR
+    bool colored;
+#endif
 } graph_settings;
+
+static unsigned int
+        colors[256] = { LCD_RGBPACK(0, 0, 0), LCD_RGBPACK(1, 1, 1), LCD_RGBPACK(2, 2, 2),
+                LCD_RGBPACK(3, 3, 3), LCD_RGBPACK(4, 4, 4), LCD_RGBPACK(5, 5, 5),
+                LCD_RGBPACK(6, 6, 6), LCD_RGBPACK(7, 7, 7), LCD_RGBPACK(8, 8, 8),
+                LCD_RGBPACK(9, 9, 9), LCD_RGBPACK(10, 10, 10), LCD_RGBPACK(11, 11, 11),
+                LCD_RGBPACK(12, 12, 12), LCD_RGBPACK(13, 13, 13), LCD_RGBPACK(14, 14, 14),
+                LCD_RGBPACK(15, 15, 15), LCD_RGBPACK(16, 16, 16), LCD_RGBPACK(17, 17, 17),
+                LCD_RGBPACK(18, 18, 18), LCD_RGBPACK(19, 19, 19), LCD_RGBPACK(20, 20, 20),
+                LCD_RGBPACK(21, 21, 21), LCD_RGBPACK(22, 22, 22), LCD_RGBPACK(23, 23, 23),
+                LCD_RGBPACK(24, 24, 24), LCD_RGBPACK(25, 25, 25), LCD_RGBPACK(26, 26, 26),
+                LCD_RGBPACK(27, 27, 27), LCD_RGBPACK(28, 28, 28), LCD_RGBPACK(29, 29, 29),
+                LCD_RGBPACK(30, 30, 30), LCD_RGBPACK(31, 31, 31), LCD_RGBPACK(32, 32, 32),
+                LCD_RGBPACK(33, 33, 33), LCD_RGBPACK(34, 34, 34), LCD_RGBPACK(35, 35, 35),
+                LCD_RGBPACK(36, 36, 36), LCD_RGBPACK(37, 37, 37), LCD_RGBPACK(38, 38, 38),
+                LCD_RGBPACK(39, 39, 39), LCD_RGBPACK(40, 40, 40), LCD_RGBPACK(41, 41, 41),
+                LCD_RGBPACK(42, 42, 42), LCD_RGBPACK(43, 43, 43), LCD_RGBPACK(44, 44, 44),
+                LCD_RGBPACK(45, 45, 45), LCD_RGBPACK(46, 46, 46), LCD_RGBPACK(47, 47, 47),
+                LCD_RGBPACK(48, 48, 48), LCD_RGBPACK(49, 49, 49), LCD_RGBPACK(50, 50, 50),
+                LCD_RGBPACK(51, 51, 51), LCD_RGBPACK(52, 52, 52), LCD_RGBPACK(53, 53, 53),
+                LCD_RGBPACK(54, 54, 54), LCD_RGBPACK(55, 55, 55), LCD_RGBPACK(56, 56, 56),
+                LCD_RGBPACK(57, 57, 57), LCD_RGBPACK(58, 58, 58), LCD_RGBPACK(59, 59, 59),
+                LCD_RGBPACK(60, 60, 60), LCD_RGBPACK(61, 61, 61), LCD_RGBPACK(62, 62, 62),
+                LCD_RGBPACK(63, 63, 63), LCD_RGBPACK(64, 64, 64), LCD_RGBPACK(65, 65, 65),
+                LCD_RGBPACK(66, 66, 66), LCD_RGBPACK(67, 67, 67), LCD_RGBPACK(68, 68, 68),
+                LCD_RGBPACK(69, 69, 69), LCD_RGBPACK(70, 70, 70), LCD_RGBPACK(71, 71, 71),
+                LCD_RGBPACK(72, 72, 72), LCD_RGBPACK(73, 73, 73), LCD_RGBPACK(74, 74, 74),
+                LCD_RGBPACK(75, 75, 75), LCD_RGBPACK(76, 76, 76), LCD_RGBPACK(77, 77, 77),
+                LCD_RGBPACK(78, 78, 78), LCD_RGBPACK(79, 79, 79), LCD_RGBPACK(80, 80, 80),
+                LCD_RGBPACK(81, 81, 81), LCD_RGBPACK(82, 82, 82), LCD_RGBPACK(83, 83, 83),
+                LCD_RGBPACK(84, 84, 84), LCD_RGBPACK(85, 85, 85), LCD_RGBPACK(86, 86, 86),
+                LCD_RGBPACK(87, 87, 87), LCD_RGBPACK(88, 88, 88), LCD_RGBPACK(89, 89, 89),
+                LCD_RGBPACK(90, 90, 90), LCD_RGBPACK(91, 91, 91), LCD_RGBPACK(92, 92, 92),
+                LCD_RGBPACK(93, 93, 93), LCD_RGBPACK(94, 94, 94), LCD_RGBPACK(95, 95, 95),
+                LCD_RGBPACK(96, 96, 96), LCD_RGBPACK(97, 97, 97), LCD_RGBPACK(98, 98, 98),
+                LCD_RGBPACK(99, 99, 99), LCD_RGBPACK(100, 100, 100), LCD_RGBPACK(101, 101,
+                                                                     101),
+                LCD_RGBPACK(102, 102, 102), LCD_RGBPACK(103, 103, 103), LCD_RGBPACK(104,
+                                                                        104,
+                                                                        104),
+                LCD_RGBPACK(105, 105, 105), LCD_RGBPACK(106, 106, 106), LCD_RGBPACK(107,
+                                                                        107,
+                                                                        107),
+                LCD_RGBPACK(108, 108, 108), LCD_RGBPACK(109, 109, 109), LCD_RGBPACK(110,
+                                                                        110,
+                                                                        110),
+                LCD_RGBPACK(111, 111, 111), LCD_RGBPACK(112, 112, 112), LCD_RGBPACK(113,
+                                                                        113,
+                                                                        113),
+                LCD_RGBPACK(114, 114, 114), LCD_RGBPACK(115, 115, 115), LCD_RGBPACK(116,
+                                                                        116,
+                                                                        116),
+                LCD_RGBPACK(117, 117, 117), LCD_RGBPACK(118, 118, 118), LCD_RGBPACK(119,
+                                                                        119,
+                                                                        119),
+                LCD_RGBPACK(120, 120, 120), LCD_RGBPACK(121, 121, 121), LCD_RGBPACK(122,
+                                                                        122,
+                                                                        122),
+                LCD_RGBPACK(123, 123, 123), LCD_RGBPACK(124, 124, 124), LCD_RGBPACK(125,
+                                                                        125,
+                                                                        125),
+                LCD_RGBPACK(126, 126, 126), LCD_RGBPACK(127, 127, 127), LCD_RGBPACK(128,
+                                                                        128,
+                                                                        128),
+                LCD_RGBPACK(129, 129, 129), LCD_RGBPACK(130, 130, 130), LCD_RGBPACK(131,
+                                                                        131,
+                                                                        131),
+                LCD_RGBPACK(132, 132, 132), LCD_RGBPACK(133, 133, 133), LCD_RGBPACK(134,
+                                                                        134,
+                                                                        134),
+                LCD_RGBPACK(135, 135, 135), LCD_RGBPACK(136, 136, 136), LCD_RGBPACK(137,
+                                                                        137,
+                                                                        137),
+                LCD_RGBPACK(138, 138, 138), LCD_RGBPACK(139, 139, 139), LCD_RGBPACK(140,
+                                                                        140,
+                                                                        140),
+                LCD_RGBPACK(141, 141, 141), LCD_RGBPACK(142, 142, 142), LCD_RGBPACK(143,
+                                                                        143,
+                                                                        143),
+                LCD_RGBPACK(144, 144, 144), LCD_RGBPACK(145, 145, 145), LCD_RGBPACK(146,
+                                                                        146,
+                                                                        146),
+                LCD_RGBPACK(147, 147, 147), LCD_RGBPACK(148, 148, 148), LCD_RGBPACK(149,
+                                                                        149,
+                                                                        149),
+                LCD_RGBPACK(150, 150, 150), LCD_RGBPACK(151, 151, 151), LCD_RGBPACK(152,
+                                                                        152,
+                                                                        152),
+                LCD_RGBPACK(153, 153, 153), LCD_RGBPACK(154, 154, 154), LCD_RGBPACK(155,
+                                                                        155,
+                                                                        155),
+                LCD_RGBPACK(156, 156, 156), LCD_RGBPACK(157, 157, 157), LCD_RGBPACK(158,
+                                                                        158,
+                                                                        158),
+                LCD_RGBPACK(159, 159, 159), LCD_RGBPACK(160, 160, 160), LCD_RGBPACK(161,
+                                                                        161,
+                                                                        161),
+                LCD_RGBPACK(162, 162, 162), LCD_RGBPACK(163, 163, 163), LCD_RGBPACK(164,
+                                                                        164,
+                                                                        164),
+                LCD_RGBPACK(165, 165, 165), LCD_RGBPACK(166, 166, 166), LCD_RGBPACK(167,
+                                                                        167,
+                                                                        167),
+                LCD_RGBPACK(168, 168, 168), LCD_RGBPACK(169, 169, 169), LCD_RGBPACK(170,
+                                                                        170,
+                                                                        170),
+                LCD_RGBPACK(171, 171, 171), LCD_RGBPACK(172, 172, 172), LCD_RGBPACK(173,
+                                                                        173,
+                                                                        173),
+                LCD_RGBPACK(174, 174, 174), LCD_RGBPACK(175, 175, 175), LCD_RGBPACK(176,
+                                                                        176,
+                                                                        176),
+                LCD_RGBPACK(177, 177, 177), LCD_RGBPACK(178, 178, 178), LCD_RGBPACK(179,
+                                                                        179,
+                                                                        179),
+                LCD_RGBPACK(180, 180, 180), LCD_RGBPACK(181, 181, 181), LCD_RGBPACK(182,
+                                                                        182,
+                                                                        182),
+                LCD_RGBPACK(183, 183, 183), LCD_RGBPACK(184, 184, 184), LCD_RGBPACK(185,
+                                                                        185,
+                                                                        185),
+                LCD_RGBPACK(186, 186, 186), LCD_RGBPACK(187, 187, 187), LCD_RGBPACK(188,
+                                                                        188,
+                                                                        188),
+                LCD_RGBPACK(189, 189, 189), LCD_RGBPACK(190, 190, 190), LCD_RGBPACK(191,
+                                                                        191,
+                                                                        191),
+                LCD_RGBPACK(192, 192, 192), LCD_RGBPACK(193, 193, 193), LCD_RGBPACK(194,
+                                                                        194,
+                                                                        194),
+                LCD_RGBPACK(195, 195, 195), LCD_RGBPACK(196, 196, 196), LCD_RGBPACK(197,
+                                                                        197,
+                                                                        197),
+                LCD_RGBPACK(198, 198, 198), LCD_RGBPACK(199, 199, 199), LCD_RGBPACK(200,
+                                                                        200,
+                                                                        200),
+                LCD_RGBPACK(201, 201, 201), LCD_RGBPACK(202, 202, 202), LCD_RGBPACK(203,
+                                                                        203,
+                                                                        203),
+                LCD_RGBPACK(204, 204, 204), LCD_RGBPACK(205, 205, 205), LCD_RGBPACK(206,
+                                                                        206,
+                                                                        206),
+                LCD_RGBPACK(207, 207, 207), LCD_RGBPACK(208, 208, 208), LCD_RGBPACK(209,
+                                                                        209,
+                                                                        209),
+                LCD_RGBPACK(210, 210, 210), LCD_RGBPACK(211, 211, 211), LCD_RGBPACK(212,
+                                                                        212,
+                                                                        212),
+                LCD_RGBPACK(213, 213, 213), LCD_RGBPACK(214, 214, 214), LCD_RGBPACK(215,
+                                                                        215,
+                                                                        215),
+                LCD_RGBPACK(216, 216, 216), LCD_RGBPACK(217, 217, 217), LCD_RGBPACK(218,
+                                                                        218,
+                                                                        218),
+                LCD_RGBPACK(219, 219, 219), LCD_RGBPACK(220, 220, 220), LCD_RGBPACK(221,
+                                                                        221,
+                                                                        221),
+                LCD_RGBPACK(222, 222, 222), LCD_RGBPACK(223, 223, 223), LCD_RGBPACK(224,
+                                                                        224,
+                                                                        224),
+                LCD_RGBPACK(225, 225, 225), LCD_RGBPACK(226, 226, 226), LCD_RGBPACK(227,
+                                                                        227,
+                                                                        227),
+                LCD_RGBPACK(228, 228, 228), LCD_RGBPACK(229, 229, 229), LCD_RGBPACK(230,
+                                                                        230,
+                                                                        230),
+                LCD_RGBPACK(231, 231, 231), LCD_RGBPACK(232, 232, 232), LCD_RGBPACK(233,
+                                                                        233,
+                                                                        233),
+                LCD_RGBPACK(234, 234, 234), LCD_RGBPACK(235, 235, 235), LCD_RGBPACK(236,
+                                                                        236,
+                                                                        236),
+                LCD_RGBPACK(237, 237, 237), LCD_RGBPACK(238, 238, 238), LCD_RGBPACK(239,
+                                                                        239,
+                                                                        239),
+                LCD_RGBPACK(240, 240, 240), LCD_RGBPACK(241, 241, 241), LCD_RGBPACK(242,
+                                                                        242,
+                                                                        242),
+                LCD_RGBPACK(243, 243, 243), LCD_RGBPACK(244, 244, 244), LCD_RGBPACK(245,
+                                                                        245,
+                                                                        245),
+                LCD_RGBPACK(246, 246, 246), LCD_RGBPACK(247, 247, 247), LCD_RGBPACK(248,
+                                                                        248,
+                                                                        248),
+                LCD_RGBPACK(249, 249, 249), LCD_RGBPACK(250, 250, 250), LCD_RGBPACK(251,
+                                                                        251,
+                                                                        251),
+                LCD_RGBPACK(252, 252, 252), LCD_RGBPACK(253, 253, 253), LCD_RGBPACK(254,
+                                                                        254,
+                                                                        254),
+                LCD_RGBPACK(255, 255, 255) };
 
 static long next_update = 0;
 
@@ -393,12 +592,18 @@ void draw_lines_vertical(void)
     else
         vfactor = Q15_DIV(LCD_HEIGHT << 15, max << 15); /* s16.15 */
 
-    int32_t i;
+#ifdef HAVE_LCD_COLOR
+    if(!graph_settings.colored)
+    {
+        rb->lcd_set_foreground(LCD_DEFAULT_FG);
+    }
+#endif
 
     /* take the average of neighboring bins
      * if we have to scale the graph horizontally */
     int64_t bins_avg = 0;
     bool draw = true;
+    int32_t i;
     for (i = 0; i < ARRAYSIZE_PLOT; ++i)
     {
         int32_t x = 0, y = 0;
@@ -444,7 +649,17 @@ void draw_lines_vertical(void)
         }
 
         if (draw)
+        {
+#       ifdef HAVE_LCD_COLOR
+            if(graph_settings.colored)
+            {
+                int32_t color = Q15_DIV(y << 15, LCD_HEIGHT << 15);
+                color = Q15_MUL(color, 255 << 15) >> 15;
+                rb->lcd_set_foreground(colors[color]);
+            }
+#       endif
             rb->lcd_drawline(x, LCD_HEIGHT, x, LCD_HEIGHT - y);
+        }
     }
 }
 
@@ -477,12 +692,18 @@ void draw_lines_horizontal(void)
     else
         hfactor = Q15_DIV(LCD_WIDTH << 15, max << 15); /* s16.15 */
 
-    int32_t i;
+#ifdef HAVE_LCD_COLOR
+    if(!graph_settings.colored)
+    {
+        rb->lcd_set_foreground(LCD_DEFAULT_FG);
+    }
+#endif
 
     /* take the average of neighboring bins
      * if we have to scale the graph horizontally */
     int64_t bins_avg = 0;
     bool draw = true;
+    int32_t i;
     for (i = 0; i < ARRAYSIZE_PLOT; ++i)
     {
         int32_t x = 0, y = 0;
@@ -527,7 +748,17 @@ void draw_lines_horizontal(void)
         }
 
         if (draw)
+        {
+#       ifdef HAVE_LCD_COLOR
+            if(graph_settings.colored)
+            {
+                int32_t color = Q15_DIV(x << 15, LCD_WIDTH << 15);
+                color = Q15_MUL(color, 255 << 15) >> 15;
+                rb->lcd_set_foreground(colors[color]);
+            }
+#       endif
             rb->lcd_drawline(0, y, x, y);
+        }
     }
 }
 
@@ -671,12 +902,14 @@ enum plugin_status plugin_start(const void* parameter)
     rb->lcd_set_backdrop(NULL);
     backlight_force_on();
 
-    /* Defaults; TODO: mode should be a saveable setting */
+    /* Defaults */
     bool run = true;
     int mode = 0;
     graph_settings.logarithmic = true;
     graph_settings.orientation_vertical = true;
+#ifdef HAVE_LCD_COLOR
     graph_settings.colored = false; /* doesn't do anything yet*/
+#endif
 
     /* set the end of the first time slot - rest of the
      * next_update work is done in draw() */
@@ -770,6 +1003,13 @@ enum plugin_status plugin_start(const void* parameter)
                 draw(mode, 0);
                 break;
             }
+#           ifdef HAVE_LCD_COLOR
+            case FFT_COLOR: {
+                graph_settings.colored = !graph_settings.colored;
+                draw(mode, 0);
+                break;
+            }
+#           endif
             default: {
                 if (rb->default_event_handler(button) == SYS_USB_CONNECTED)
                     return PLUGIN_USB_CONNECTED;
