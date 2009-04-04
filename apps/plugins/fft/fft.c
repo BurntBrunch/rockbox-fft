@@ -28,6 +28,7 @@ PLUGIN_HEADER
 #if CONFIG_KEYPAD == RECORDER_PAD
 #   define FFT_PREV_GRAPH     BUTTON_LEFT
 #   define FFT_NEXT_GRAPH    BUTTON_RIGHT
+#   define FFT_ORIENTATION  BUTTON_F3
 #   define FFT_SCALE       BUTTON_UP
 #   define FFT_COLOR     BUTTON_DOWN
 #   define FFT_QUIT     BUTTON_OFF
@@ -35,6 +36,7 @@ PLUGIN_HEADER
 #elif CONFIG_KEYPAD == ARCHOS_AV300_PAD
 #   define FFT_PREV_GRAPH     BUTTON_LEFT
 #   define FFT_NEXT_GRAPH    BUTTON_RIGHT
+#   define FFT_ORIENTATION  BUTTON_F3
 #   define FFT_SCALE       BUTTON_UP
 #   define FFT_COLOR     BUTTON_DOWN
 #   define FFT_QUIT     BUTTON_OFF
@@ -42,6 +44,7 @@ PLUGIN_HEADER
 #elif CONFIG_KEYPAD == ONDIO_PAD
 #   define FFT_PREV_GRAPH     BUTTON_LEFT
 #   define FFT_NEXT_GRAPH    BUTTON_RIGHT
+#   define FFT_ORIENTATION  (BUTTON_MENU | BUTTON_LEFT)
 #   define FFT_SCALE       BUTTON_UP
 #   define FFT_COLOR     BUTTON_DOWN
 #   define FFT_QUIT     BUTTON_OFF
@@ -50,6 +53,7 @@ PLUGIN_HEADER
       (CONFIG_KEYPAD == IRIVER_H300_PAD)
 #   define FFT_PREV_GRAPH     BUTTON_LEFT
 #   define FFT_NEXT_GRAPH    BUTTON_RIGHT
+#   define FFT_ORIENTATION  BUTTON_REC
 #   define FFT_SCALE       BUTTON_UP
 #   define FFT_COLOR     BUTTON_DOWN
 #   define FFT_QUIT     BUTTON_OFF
@@ -60,6 +64,7 @@ PLUGIN_HEADER
 #   define MINESWP_SCROLLWHEEL
 #   define FFT_PREV_GRAPH       BUTTON_LEFT
 #   define FFT_NEXT_GRAPH      BUTTON_RIGHT
+#   define FFT_ORIENTATION  (BUTTON_SELECT | BUTTON_LEFT)
 #   define FFT_SCALE         BUTTON_MENU
 #   define FFT_COLOR       BUTTON_PLAY
 #   define FFT_QUIT       (BUTTON_SELECT | BUTTON_MENU)
@@ -67,6 +72,7 @@ PLUGIN_HEADER
 #elif (CONFIG_KEYPAD == IAUDIO_X5M5_PAD)
 #   define FFT_PREV_GRAPH     BUTTON_LEFT
 #   define FFT_NEXT_GRAPH    BUTTON_RIGHT
+#   define FFT_ORIENTATION  BUTTON_SELECT
 #   define FFT_SCALE       BUTTON_UP
 #   define FFT_COLOR     BUTTON_DOWN
 #   define FFT_QUIT     BUTTON_POWER
@@ -75,6 +81,7 @@ PLUGIN_HEADER
 #   define FFT_PREV_GRAPH     BUTTON_LEFT
 #   define FFT_NEXT_GRAPH    BUTTON_RIGHT
 #   define FFT_SCALE       BUTTON_UP
+#   define FFT_ORIENTATION  BUTTON_SELECT
 #   define FFT_COLOR     BUTTON_DOWN
 #   define FFT_QUIT     BUTTON_POWER
 
@@ -83,6 +90,7 @@ PLUGIN_HEADER
 #   define MINESWP_SCROLLWHEEL
 #   define FFT_PREV_GRAPH     BUTTON_LEFT
 #   define FFT_NEXT_GRAPH    BUTTON_RIGHT
+#   define FFT_ORIENTATION  BUTTON_SELECT
 #   define FFT_SCALE       BUTTON_UP
 #   define FFT_COLOR     BUTTON_DOWN
 #   define FFT_QUIT     BUTTON_POWER
@@ -91,6 +99,7 @@ PLUGIN_HEADER
 
 #   define FFT_PREV_GRAPH     BUTTON_LEFT
 #   define FFT_NEXT_GRAPH    BUTTON_RIGHT
+#   define FFT_ORIENTATION  (BUTTON_SELECT | BUTTON_LEFT)
 #   define FFT_SCALE       BUTTON_UP
 #   define FFT_COLOR     BUTTON_DOWN
 #   define FFT_QUIT     BUTTON_POWER
@@ -100,54 +109,63 @@ PLUGIN_HEADER
 (CONFIG_KEYPAD == SANSA_M200_PAD)
 #   define FFT_PREV_GRAPH       BUTTON_LEFT
 #   define FFT_NEXT_GRAPH      BUTTON_RIGHT
-#   define FFT_SCALE         BUTTON_UP
+#   define FFT_ORIENTATION  BUTTON_UP
+#   define FFT_SCALE         BUTTON_SELECT
 #   define FFT_COLOR       BUTTON_DOWN
 #   define FFT_QUIT       BUTTON_POWER
 
 #elif (CONFIG_KEYPAD == IRIVER_H10_PAD)
-#   define FFT_PREV_GRAPH     BUTTON_LEFT
-#   define FFT_NEXT_GRAPH    BUTTON_RIGHT
-#   define FFT_SCALE       BUTTON_SCROLL_UP
-#   define FFT_COLOR     BUTTON_SCROLL_DOWN
-#   define FFT_QUIT     BUTTON_POWER
+#   define FFT_PREV_GRAPH       BUTTON_LEFT
+#   define FFT_NEXT_GRAPH       BUTTON_RIGHT
+#   define FFT_ORIENTATION      BUTTON_FF
+#   define FFT_SCALE            BUTTON_REW
+#   define FFT_COLOR            BUTTON_PLAY
+#   define FFT_QUIT             BUTTON_POWER
 
 #elif (CONFIG_KEYPAD == GIGABEAT_S_PAD)
-#   define FFT_PREV_GRAPH     BUTTON_LEFT
-#   define FFT_NEXT_GRAPH    BUTTON_RIGHT
-#   define FFT_SCALE       BUTTON_UP
-#   define FFT_COLOR     BUTTON_DOWN
-#   define FFT_QUIT     BUTTON_BACK
+#   define FFT_PREV_GRAPH       BUTTON_LEFT
+#   define FFT_NEXT_GRAPH       BUTTON_RIGHT
+#   define FFT_ORIENTATION      BUTTON_MENU
+#   define FFT_SCALE            BUTTON_UP
+#   define FFT_COLOR            BUTTON_DOWN
+#   define FFT_QUIT             BUTTON_BACK
 
 #elif (CONFIG_KEYPAD == MROBE100_PAD)
-#   define FFT_PREV_GRAPH     BUTTON_LEFT
-#   define FFT_NEXT_GRAPH    BUTTON_RIGHT
-#   define FFT_SCALE       BUTTON_UP
-#   define FFT_COLOR     BUTTON_DOWN
-#   define FFT_QUIT     BUTTON_POWER
+#   define FFT_PREV_GRAPH       BUTTON_LEFT
+#   define FFT_NEXT_GRAPH       BUTTON_RIGHT
+#   define FFT_ORIENTATION      BUTTON_PLAY
+#   define FFT_SCALE            BUTTON_UP
+#   define FFT_COLOR            BUTTON_DOWN
+#   define FFT_QUIT             BUTTON_POWER
 
 #elif CONFIG_KEYPAD == IAUDIO_M3_PAD
-#   define FFT_PREV_GRAPH     BUTTON_RC_REW
-#   define FFT_NEXT_GRAPH    BUTTON_RC_FF
-#   define FFT_SCALE       BUTTON_RC_VOL_UP
-#   define FFT_COLOR     BUTTON_RC_VOL_DOWN
-#   define FFT_QUIT     BUTTON_RC_REC
+#   define FFT_PREV_GRAPH       BUTTON_RC_REW
+#   define FFT_NEXT_GRAPH       BUTTON_RC_FF
+#   define FFT_ORIENTATION      BUTTON_RC_MODE
+#   define FFT_SCALE            BUTTON_RC_VOL_UP
+#   define FFT_COLOR            BUTTON_RC_VOL_DOWN
+#   define FFT_QUIT             BUTTON_RC_REC
 
 #elif (CONFIG_KEYPAD == COWOND2_PAD)
-#   define FFT_QUIT     BUTTON_POWER
+#   define FFT_QUIT             BUTTON_POWER
+#   define FFT_PREV_GRAPH       BUTTON_PLUS
+#   define FFT_NEXT_GRAPH       BUTTON_MINUS
 
 #elif CONFIG_KEYPAD == CREATIVEZVM_PAD
-#   define FFT_PREV_GRAPH     BUTTON_LEFT
-#   define FFT_NEXT_GRAPH    BUTTON_RIGHT
-#   define FFT_SCALE       BUTTON_UP
-#   define FFT_COLOR     BUTTON_DOWN
-#   define FFT_QUIT     BUTTON_BACK
+#   define FFT_PREV_GRAPH       BUTTON_LEFT
+#   define FFT_NEXT_GRAPH       BUTTON_RIGHT
+#   define FFT_ORIENTATION      BUTTON_MENU
+#   define FFT_SCALE            BUTTON_UP
+#   define FFT_COLOR            BUTTON_DOWN
+#   define FFT_QUIT             BUTTON_BACK
 
 #elif CONFIG_KEYPAD == PHILIPS_HDD1630_PAD
-#   define FFT_PREV_GRAPH     BUTTON_LEFT
-#   define FFT_NEXT_GRAPH    BUTTON_RIGHT
-#   define FFT_SCALE       BUTTON_UP
-#   define FFT_COLOR     BUTTON_DOWN
-#   define FFT_QUIT     BUTTON_POWER
+#   define FFT_PREV_GRAPH       BUTTON_LEFT
+#   define FFT_NEXT_GRAPH       BUTTON_RIGHT
+#   define FFT_ORIENTATION      BUTTON_SELECT
+#   define FFT_SCALE            BUTTON_UP
+#   define FFT_COLOR            BUTTON_DOWN
+#   define FFT_QUIT             BUTTON_POWER
 
 #else
 #error No keymap defined!
@@ -279,12 +297,15 @@ const unsigned char* scales_text[] = { "Linear scale", "Logarithmic scale" };
 struct {
     bool logarithmic;
     bool colored;
+    bool orientation_vertical;
 } graph_settings;
 
 static long next_update = 0;
 
-void draw_lines(void);
-void draw_bars(void);
+void draw_lines_vertical(void);
+void draw_lines_horizontal(void);
+void draw_bars_vertical(void);
+void draw_bars_horizontal(void);
 
 void draw(char mode, const unsigned char* message)
 {
@@ -301,11 +322,17 @@ void draw(char mode, const unsigned char* message)
     {
         default:
         case 0: {
-            draw_lines();
+            if (graph_settings.orientation_vertical)
+                draw_lines_vertical();
+            else
+                draw_lines_horizontal();
             break;
         }
         case 1: {
-            draw_bars();
+            if(graph_settings.orientation_vertical)
+                draw_bars_vertical();
+            else
+                draw_bars_horizontal();
             break;
         }
     }
@@ -337,7 +364,7 @@ void draw(char mode, const unsigned char* message)
     next_update = *rb->current_tick + HZ / REFRESH_RATE;
 }
 
-void draw_lines(void)
+void draw_lines_vertical(void)
 {
     static int max = 0;
     static bool last_mode = false;
@@ -376,7 +403,9 @@ void draw_lines(void)
     {
         int32_t x = 0, y = 0;
 
-        x = Q15_MUL(hfactor, i << 15) >> 15;
+        x = Q15_MUL(hfactor, i << 15);
+        x += (1 << 14);
+        x >>= 15;
 
         if (hfactor < 32768) /* hfactor < 0, graph compression */
         {
@@ -419,7 +448,90 @@ void draw_lines(void)
     }
 }
 
-void draw_bars(void)
+void draw_lines_horizontal(void)
+{
+    static int max = 0;
+    static bool last_mode = false;
+
+    static const int32_t vfactor =
+            Q15_DIV(LCD_HEIGHT << 15, (ARRAYSIZE_PLOT) << 15),
+            bins_per_pixel = (ARRAYSIZE_PLOT) / LCD_HEIGHT;
+
+    if (graph_settings.logarithmic != last_mode)
+    {
+        max = 0; /* reset the graph on scaling mode change */
+        last_mode = graph_settings.logarithmic;
+    }
+    int32_t new_max = calc_magnitudes(graph_settings.logarithmic);
+
+    if (new_max > max)
+        max = new_max;
+
+    if (new_max == 0 || max == 0) /* nothing to draw */
+        return;
+
+    int32_t hfactor;
+
+    if (graph_settings.logarithmic)
+        hfactor = Q_DIV(LCD_WIDTH << 16, max, 16); /* s15.16 */
+    else
+        hfactor = Q15_DIV(LCD_WIDTH << 15, max << 15); /* s16.15 */
+
+    int32_t i;
+
+    /* take the average of neighboring bins
+     * if we have to scale the graph horizontally */
+    int64_t bins_avg = 0;
+    bool draw = true;
+    for (i = 0; i < ARRAYSIZE_PLOT; ++i)
+    {
+        int32_t x = 0, y = 0;
+
+        y = Q15_MUL(vfactor, i << 15) + (1 << 14);
+        y >>= 15;
+
+        if (vfactor < 32768) /* vfactor < 0, graph compression */
+        {
+            draw = false;
+            bins_avg += plot[i];
+
+            /* fix the division by zero warning:
+             * bins_per_pixel is zero when the graph is expanding;
+             * execution won't even reach this point - this is a dummy constant
+             */
+            const int32_t div = bins_per_pixel > 0 ? bins_per_pixel : 1;
+            if ((i + 1) % div == 0)
+            {
+                if (graph_settings.logarithmic)
+                {
+                    bins_avg = Q_DIV(bins_avg, div << 16, 16);
+
+                    x = Q_MUL(hfactor, bins_avg, 16) >> 16;
+                }
+                else
+                {
+                    bins_avg = Q15_DIV(bins_avg << 15, div << 15);
+                    bins_avg += (1 << 14); /* rounding up */
+
+                    x = Q15_MUL(hfactor, bins_avg) >> 15;
+                }
+
+                bins_avg = 0;
+                draw = true;
+            }
+        }
+        else
+        {
+            y = Q15_MUL(hfactor, plot[i] << 15) >> 15;
+            draw = true;
+        }
+
+        if (draw)
+            rb->lcd_drawline(0, y, x, y);
+    }
+}
+
+void draw_bars_vertical(void)
 {
     static const unsigned int bars = 12, border = 3, items = ARRAYSIZE_PLOT
             / bars, width = (LCD_WIDTH - ((bars - 1) * border)) / bars;
@@ -482,6 +594,69 @@ void draw_bars(void)
     }
 }
 
+void draw_bars_horizontal(void)
+{
+    static const unsigned int bars = 12, border = 3, items = ARRAYSIZE_PLOT
+            / bars, height = (LCD_HEIGHT - ((bars - 1) * border)) / bars;
+
+    calc_magnitudes(graph_settings.logarithmic);
+
+    int64_t bars_values[bars], bars_max = 0, avg = 0;
+    unsigned int i, bars_idx = 0;
+    for (i = 0; i < ARRAYSIZE_PLOT; ++i)
+    {
+        avg += plot[i];
+        if ((i + 1) % items == 0)
+        {
+            /* Calculate the average value and keep the fractional part
+             * for some added precision */
+            if (graph_settings.logarithmic)
+                avg = Q_DIV(avg, items << 16, 16); /* s15.16 */
+            else
+                avg = Q15_DIV(avg << 15, items << 15); /* s16.15 */
+            bars_values[bars_idx] = avg;
+
+            if (bars_values[bars_idx] > bars_max)
+                bars_max = bars_values[bars_idx];
+
+            bars_idx++;
+            avg = 0;
+        }
+    }
+
+    if(bars_max == 0) /* nothing to draw */
+        return;
+
+    /* Give the graph some headroom */
+    bars_max = Q15_MUL(bars_max, float_q15(1.1));
+
+    int64_t hfactor;
+    if (graph_settings.logarithmic)
+        hfactor = Q_DIV(LCD_WIDTH << 16, bars_max, 16);
+    else
+        hfactor = Q15_DIV(LCD_WIDTH << 15, bars_max);
+
+    for (i = 0; i < bars; ++i)
+    {
+        int y = (i) * (border + height);
+        int x;
+        if (graph_settings.logarithmic)
+        {
+            x = Q_MUL(hfactor, bars_values[i], 16);
+            x += (1 << 15);
+            x >>= 16;
+        }
+        else
+        {
+            x = Q15_MUL(hfactor, bars_values[i]);
+            x += (1 << 14);
+            x >>= 15;
+        }
+
+        rb->lcd_fillrect(0, y, x, height);
+    }
+}
+
 /********************* End of plotting functions (modes) *********************/
 
 enum plugin_status plugin_start(const void* parameter)
@@ -500,6 +675,7 @@ enum plugin_status plugin_start(const void* parameter)
     bool run = true;
     int mode = 0;
     graph_settings.logarithmic = true;
+    graph_settings.orientation_vertical = true;
     graph_settings.colored = false; /* doesn't do anything yet*/
 
     /* set the end of the first time slot - rest of the
@@ -589,6 +765,16 @@ enum plugin_status plugin_start(const void* parameter)
                 draw(mode, scales_text[graph_settings.logarithmic ? 1 : 0]);
                 break;
             }
+            case FFT_ORIENTATION: {
+                graph_settings.orientation_vertical = !graph_settings.orientation_vertical;
+                draw(mode, 0);
+                break;
+            }
+            default: {
+                if (rb->default_event_handler(button) == SYS_USB_CONNECTED)
+                    return PLUGIN_USB_CONNECTED;
+            }
+
         }
     }
     backlight_use_settings();
