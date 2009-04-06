@@ -21,6 +21,7 @@
 #include "plugin.h"
 
 #include "lib/helper.h"
+#include "lib/xlcd.h"
 #include "math.h"
 
 PLUGIN_HEADER
@@ -29,6 +30,7 @@ PLUGIN_HEADER
 #   define FFT_PREV_GRAPH     BUTTON_LEFT
 #   define FFT_NEXT_GRAPH    BUTTON_RIGHT
 #   define FFT_ORIENTATION  BUTTON_F3
+#   define FFT_WINDOW     BUTTON_F1
 #   define FFT_SCALE       BUTTON_UP
 #   define FFT_COLOR     BUTTON_DOWN
 #   define FFT_QUIT     BUTTON_OFF
@@ -37,6 +39,7 @@ PLUGIN_HEADER
 #   define FFT_PREV_GRAPH     BUTTON_LEFT
 #   define FFT_NEXT_GRAPH    BUTTON_RIGHT
 #   define FFT_ORIENTATION  BUTTON_F3
+#   define FFT_WINDOW     BUTTON_F1
 #   define FFT_SCALE       BUTTON_UP
 #   define FFT_COLOR     BUTTON_DOWN
 #   define FFT_QUIT     BUTTON_OFF
@@ -45,6 +48,7 @@ PLUGIN_HEADER
 #   define FFT_PREV_GRAPH     BUTTON_LEFT
 #   define FFT_NEXT_GRAPH    BUTTON_RIGHT
 #   define FFT_ORIENTATION  (BUTTON_MENU | BUTTON_LEFT)
+#   define FFT_WINDOW     (BUTTON_MENU | BUTTON_RIGHT)
 #   define FFT_SCALE       BUTTON_UP
 #   define FFT_COLOR     BUTTON_DOWN
 #   define FFT_QUIT     BUTTON_OFF
@@ -54,6 +58,7 @@ PLUGIN_HEADER
 #   define FFT_PREV_GRAPH     BUTTON_LEFT
 #   define FFT_NEXT_GRAPH    BUTTON_RIGHT
 #   define FFT_ORIENTATION  BUTTON_REC
+#   define FFT_WINDOW     BUTTON_SELECT
 #   define FFT_SCALE       BUTTON_UP
 #   define FFT_COLOR     BUTTON_DOWN
 #   define FFT_QUIT     BUTTON_OFF
@@ -65,6 +70,7 @@ PLUGIN_HEADER
 #   define FFT_PREV_GRAPH       BUTTON_LEFT
 #   define FFT_NEXT_GRAPH      BUTTON_RIGHT
 #   define FFT_ORIENTATION  (BUTTON_SELECT | BUTTON_LEFT)
+#   define FFT_WINDOW     (BUTTON_SELECT | BUTTON_RIGHT)
 #   define FFT_SCALE         BUTTON_MENU
 #   define FFT_COLOR       BUTTON_PLAY
 #   define FFT_QUIT       (BUTTON_SELECT | BUTTON_MENU)
@@ -73,6 +79,7 @@ PLUGIN_HEADER
 #   define FFT_PREV_GRAPH     BUTTON_LEFT
 #   define FFT_NEXT_GRAPH    BUTTON_RIGHT
 #   define FFT_ORIENTATION  BUTTON_SELECT
+#   define FFT_WINDOW     BUTTON_PLAY
 #   define FFT_SCALE       BUTTON_UP
 #   define FFT_COLOR     BUTTON_DOWN
 #   define FFT_QUIT     BUTTON_POWER
@@ -82,24 +89,24 @@ PLUGIN_HEADER
 #   define FFT_NEXT_GRAPH    BUTTON_RIGHT
 #   define FFT_SCALE       BUTTON_UP
 #   define FFT_ORIENTATION  BUTTON_SELECT
+#   define FFT_WINDOW        BUTTON_A
 #   define FFT_COLOR     BUTTON_DOWN
 #   define FFT_QUIT     BUTTON_POWER
 
 #elif (CONFIG_KEYPAD == SANSA_E200_PAD)
-
-#   define MINESWP_SCROLLWHEEL
 #   define FFT_PREV_GRAPH     BUTTON_LEFT
 #   define FFT_NEXT_GRAPH    BUTTON_RIGHT
 #   define FFT_ORIENTATION  BUTTON_SELECT
+#   define FFT_WINDOW        BUTTON_REC
 #   define FFT_SCALE       BUTTON_UP
 #   define FFT_COLOR     BUTTON_DOWN
 #   define FFT_QUIT     BUTTON_POWER
 
 #elif (CONFIG_KEYPAD == SANSA_FUZE_PAD)
-
 #   define FFT_PREV_GRAPH     BUTTON_LEFT
 #   define FFT_NEXT_GRAPH    BUTTON_RIGHT
 #   define FFT_ORIENTATION  (BUTTON_SELECT | BUTTON_LEFT)
+#   define FFT_WINDOW     (BUTTON_SELECT | BUTTON_RIGHT)
 #   define FFT_SCALE       BUTTON_UP
 #   define FFT_COLOR     BUTTON_DOWN
 #   define FFT_QUIT     BUTTON_POWER
@@ -110,6 +117,7 @@ PLUGIN_HEADER
 #   define FFT_PREV_GRAPH       BUTTON_LEFT
 #   define FFT_NEXT_GRAPH      BUTTON_RIGHT
 #   define FFT_ORIENTATION  BUTTON_UP
+#   define FFT_WINDOW        BUTTON_REC
 #   define FFT_SCALE         BUTTON_SELECT
 #   define FFT_COLOR       BUTTON_DOWN
 #   define FFT_QUIT       BUTTON_POWER
@@ -118,6 +126,7 @@ PLUGIN_HEADER
 #   define FFT_PREV_GRAPH       BUTTON_LEFT
 #   define FFT_NEXT_GRAPH       BUTTON_RIGHT
 #   define FFT_ORIENTATION      BUTTON_FF
+#   define FFT_WINDOW       BUTTON_SCROLL_UP
 #   define FFT_SCALE            BUTTON_REW
 #   define FFT_COLOR            BUTTON_PLAY
 #   define FFT_QUIT             BUTTON_POWER
@@ -126,6 +135,7 @@ PLUGIN_HEADER
 #   define FFT_PREV_GRAPH       BUTTON_LEFT
 #   define FFT_NEXT_GRAPH       BUTTON_RIGHT
 #   define FFT_ORIENTATION      BUTTON_MENU
+#   define FFT_WINDOW     BUTTON_PREV
 #   define FFT_SCALE            BUTTON_UP
 #   define FFT_COLOR            BUTTON_DOWN
 #   define FFT_QUIT             BUTTON_BACK
@@ -134,6 +144,7 @@ PLUGIN_HEADER
 #   define FFT_PREV_GRAPH       BUTTON_LEFT
 #   define FFT_NEXT_GRAPH       BUTTON_RIGHT
 #   define FFT_ORIENTATION      BUTTON_PLAY
+#   define FFT_WINDOW     BUTTON_SELECT
 #   define FFT_SCALE            BUTTON_UP
 #   define FFT_COLOR            BUTTON_DOWN
 #   define FFT_QUIT             BUTTON_POWER
@@ -142,6 +153,7 @@ PLUGIN_HEADER
 #   define FFT_PREV_GRAPH       BUTTON_RC_REW
 #   define FFT_NEXT_GRAPH       BUTTON_RC_FF
 #   define FFT_ORIENTATION      BUTTON_RC_MODE
+#   define FFT_WINDOW        BUTTON_RC_PLAY
 #   define FFT_SCALE            BUTTON_RC_VOL_UP
 #   define FFT_COLOR            BUTTON_RC_VOL_DOWN
 #   define FFT_QUIT             BUTTON_RC_REC
@@ -155,6 +167,7 @@ PLUGIN_HEADER
 #   define FFT_PREV_GRAPH       BUTTON_LEFT
 #   define FFT_NEXT_GRAPH       BUTTON_RIGHT
 #   define FFT_ORIENTATION      BUTTON_MENU
+#   define FFT_WINDOW     BUTTON_SELECT
 #   define FFT_SCALE            BUTTON_UP
 #   define FFT_COLOR            BUTTON_DOWN
 #   define FFT_QUIT             BUTTON_BACK
@@ -163,6 +176,7 @@ PLUGIN_HEADER
 #   define FFT_PREV_GRAPH       BUTTON_LEFT
 #   define FFT_NEXT_GRAPH       BUTTON_RIGHT
 #   define FFT_ORIENTATION      BUTTON_SELECT
+#   define FFT_WINDOW     BUTTON_MENU
 #   define FFT_SCALE            BUTTON_UP
 #   define FFT_COLOR            BUTTON_DOWN
 #   define FFT_QUIT             BUTTON_POWER
@@ -223,6 +237,7 @@ static char buffer[BUFSIZE];
 
 /************************* Math functions *************************/
 
+#define QE float_q(2.718281828, 16)
 #define LOGE_TEN 2.302585093
 #define QLOGE_TEN float_q(LOGE_TEN, 16)
 
@@ -231,40 +246,69 @@ int32_t get_log_value(int32_t value, bool fraction)
 {
     int32_t result;
 
-    /* ln (value) / ln (10) = log10 (value)*/
-    result = Q_DIV(flog((fraction ? value : value << 16)), QLOGE_TEN, 16);
+    /* ln (value)*/
+    result = flog((fraction ? value : value << 16));
 
-    /* 10 * log10 (value)*/
-    result = Q_MUL(result, 10 << 16, 16);
-
-    return result;
+    /* Not worth it to add routines for negative values
+     * (less than 2.6% of all values) */
+    return (result < 0) ? 0 : result;
 }
 
-void apply_window_func(void)
+/* Apply window function to input
+ * 0 - Hamming window
+ * 1 - Hann window */
+#define WINDOW_COUNT 2
+void apply_window_func(char mode)
 {
-    const int32_t hamming_a = float_q(0.53836, 16), hamming_b =
-            float_q(0.46164, 16);
-    size_t i;
-    for (i = 0; i < ARRAYSIZE_IN; ++i)
+    switch(mode)
     {
-        int32_t cos;
-        (void) fsincos(Q_DIV(i << 16, (ARRAYSIZE_IN - 1) << 16, 16), &cos);
-        cos >>= 15;
+        case 0: /* Hamming window */
+        {
+            const int32_t hamming_a = float_q(0.53836, 15), hamming_b =
+                    float_q(0.46164, 15);
+            size_t i;
+            for (i = 0; i < ARRAYSIZE_IN; ++i)
+            {
+                int32_t cos;
+                (void) fsincos(Q_DIV(i << 16, (ARRAYSIZE_IN - 1) << 16, 16) << 16,
+                               &cos);
+                cos >>= 16;
 
-        /* value = value * (hamming_a - hamming_b * cos( 2 * pi * i/(ArraySize - 1) ) ) */
-        input[i].r
-                = Q_MUL(input[i].r << 16, ( hamming_a - Q_MUL(cos, hamming_b, 16) ), 16)
-                        >> 16;
-        input[i].i
-                = Q_MUL(input[i].i << 16, ( hamming_a - Q_MUL(cos, hamming_b, 16) ), 16)
-                        >> 16;
+                /* value = value * (hamming_a - hamming_b * cos( 2 * pi * i/(ArraySize - 1) ) ) */
+                input[i].r = Q15_MUL(input[i].r << 15,
+                                   (hamming_a - Q15_MUL(cos, hamming_b))) >> 15;
+                input[i].i = Q15_MUL(input[i].i << 15,
+                                   (hamming_a - Q15_MUL(cos, hamming_b))) >> 15;
+            }
+            break;
+        }
+        case 1: /* Hann window */
+        {
+            size_t i;
+            for (i = 0; i < ARRAYSIZE_IN; ++i)
+            {
+                int32_t factor;
+                (void) fsincos(Q_DIV(i << 16, (ARRAYSIZE_IN - 1) << 16, 16) << 16,
+                               &factor);
+                /* s16.15; cos( 2* pi * i/(ArraySize - 1))*/
+                factor >>= 16;
+                /* 0.5 * cos( 2* pi * i/(ArraySize - 1))*/
+                factor = Q15_MUL( (1 << 14), factor);
+                /* 0.5 - 0.5 * cos( 2* pi * i/(ArraySize - 1)))*/
+                factor = (1 << 14) - factor;
+
+                input[i].r = Q15_MUL(input[i].r << 15, factor) >> 15;
+                input[i].i = Q15_MUL(input[i].i << 15, factor) >> 15;
+            }
+            break;
+        }
     }
 }
 
 /* Calculates the magnitudes from complex numbers and returns the maximum */
 int32_t calc_magnitudes(bool logarithmic)
 {
-    int32_t tmp;
+    int64_t tmp;
     size_t i;
 
     int32_t max = -2147483647;
@@ -276,7 +320,7 @@ int32_t calc_magnitudes(bool logarithmic)
         tmp += Q_MUL( ((int32_t) output[i].i) << 16,
                       ((int32_t) output[i].i) << 16, 16);
 
-        tmp = fsqrt(tmp, 16);
+        tmp = fsqrt(tmp & 0x7FFFFFFF , 16);
 
         if (logarithmic)
             tmp = get_log_value(tmp, true);
@@ -295,220 +339,166 @@ int32_t calc_magnitudes(bool logarithmic)
 
 /********************* Plotting functions (modes) *********************/
 
-const unsigned char* modes_text[] = { "Lines", "Bars" };
+const unsigned char* modes_text[] = { "Lines", "Bars", "Spectrogram" };
 const unsigned char* scales_text[] = { "Linear scale", "Logarithmic scale" };
-#define MODES_COUNT 2
+const unsigned char* window_text[] = { "Hamming window", "Hann window" };
+#define MODES_COUNT 3
 #define REFRESH_RATE 20
 
 struct {
     bool logarithmic;
     bool orientation_vertical;
+    int window_func;
 #ifdef HAVE_LCD_COLOR
     bool colored;
 #endif
 } graph_settings;
+struct {
+    int column;
+    int row;
+} spectrogram_settings;
 
-static unsigned int
-        colors[256] = { LCD_RGBPACK(0, 0, 0), LCD_RGBPACK(1, 1, 1), LCD_RGBPACK(2, 2, 2),
-                LCD_RGBPACK(3, 3, 3), LCD_RGBPACK(4, 4, 4), LCD_RGBPACK(5, 5, 5),
-                LCD_RGBPACK(6, 6, 6), LCD_RGBPACK(7, 7, 7), LCD_RGBPACK(8, 8, 8),
-                LCD_RGBPACK(9, 9, 9), LCD_RGBPACK(10, 10, 10), LCD_RGBPACK(11, 11, 11),
-                LCD_RGBPACK(12, 12, 12), LCD_RGBPACK(13, 13, 13), LCD_RGBPACK(14, 14, 14),
-                LCD_RGBPACK(15, 15, 15), LCD_RGBPACK(16, 16, 16), LCD_RGBPACK(17, 17, 17),
-                LCD_RGBPACK(18, 18, 18), LCD_RGBPACK(19, 19, 19), LCD_RGBPACK(20, 20, 20),
-                LCD_RGBPACK(21, 21, 21), LCD_RGBPACK(22, 22, 22), LCD_RGBPACK(23, 23, 23),
-                LCD_RGBPACK(24, 24, 24), LCD_RGBPACK(25, 25, 25), LCD_RGBPACK(26, 26, 26),
-                LCD_RGBPACK(27, 27, 27), LCD_RGBPACK(28, 28, 28), LCD_RGBPACK(29, 29, 29),
-                LCD_RGBPACK(30, 30, 30), LCD_RGBPACK(31, 31, 31), LCD_RGBPACK(32, 32, 32),
-                LCD_RGBPACK(33, 33, 33), LCD_RGBPACK(34, 34, 34), LCD_RGBPACK(35, 35, 35),
-                LCD_RGBPACK(36, 36, 36), LCD_RGBPACK(37, 37, 37), LCD_RGBPACK(38, 38, 38),
-                LCD_RGBPACK(39, 39, 39), LCD_RGBPACK(40, 40, 40), LCD_RGBPACK(41, 41, 41),
-                LCD_RGBPACK(42, 42, 42), LCD_RGBPACK(43, 43, 43), LCD_RGBPACK(44, 44, 44),
-                LCD_RGBPACK(45, 45, 45), LCD_RGBPACK(46, 46, 46), LCD_RGBPACK(47, 47, 47),
-                LCD_RGBPACK(48, 48, 48), LCD_RGBPACK(49, 49, 49), LCD_RGBPACK(50, 50, 50),
-                LCD_RGBPACK(51, 51, 51), LCD_RGBPACK(52, 52, 52), LCD_RGBPACK(53, 53, 53),
-                LCD_RGBPACK(54, 54, 54), LCD_RGBPACK(55, 55, 55), LCD_RGBPACK(56, 56, 56),
-                LCD_RGBPACK(57, 57, 57), LCD_RGBPACK(58, 58, 58), LCD_RGBPACK(59, 59, 59),
-                LCD_RGBPACK(60, 60, 60), LCD_RGBPACK(61, 61, 61), LCD_RGBPACK(62, 62, 62),
-                LCD_RGBPACK(63, 63, 63), LCD_RGBPACK(64, 64, 64), LCD_RGBPACK(65, 65, 65),
-                LCD_RGBPACK(66, 66, 66), LCD_RGBPACK(67, 67, 67), LCD_RGBPACK(68, 68, 68),
-                LCD_RGBPACK(69, 69, 69), LCD_RGBPACK(70, 70, 70), LCD_RGBPACK(71, 71, 71),
-                LCD_RGBPACK(72, 72, 72), LCD_RGBPACK(73, 73, 73), LCD_RGBPACK(74, 74, 74),
-                LCD_RGBPACK(75, 75, 75), LCD_RGBPACK(76, 76, 76), LCD_RGBPACK(77, 77, 77),
-                LCD_RGBPACK(78, 78, 78), LCD_RGBPACK(79, 79, 79), LCD_RGBPACK(80, 80, 80),
-                LCD_RGBPACK(81, 81, 81), LCD_RGBPACK(82, 82, 82), LCD_RGBPACK(83, 83, 83),
-                LCD_RGBPACK(84, 84, 84), LCD_RGBPACK(85, 85, 85), LCD_RGBPACK(86, 86, 86),
-                LCD_RGBPACK(87, 87, 87), LCD_RGBPACK(88, 88, 88), LCD_RGBPACK(89, 89, 89),
-                LCD_RGBPACK(90, 90, 90), LCD_RGBPACK(91, 91, 91), LCD_RGBPACK(92, 92, 92),
-                LCD_RGBPACK(93, 93, 93), LCD_RGBPACK(94, 94, 94), LCD_RGBPACK(95, 95, 95),
-                LCD_RGBPACK(96, 96, 96), LCD_RGBPACK(97, 97, 97), LCD_RGBPACK(98, 98, 98),
-                LCD_RGBPACK(99, 99, 99), LCD_RGBPACK(100, 100, 100), LCD_RGBPACK(101, 101,
-                                                                     101),
-                LCD_RGBPACK(102, 102, 102), LCD_RGBPACK(103, 103, 103), LCD_RGBPACK(104,
-                                                                        104,
-                                                                        104),
-                LCD_RGBPACK(105, 105, 105), LCD_RGBPACK(106, 106, 106), LCD_RGBPACK(107,
-                                                                        107,
-                                                                        107),
-                LCD_RGBPACK(108, 108, 108), LCD_RGBPACK(109, 109, 109), LCD_RGBPACK(110,
-                                                                        110,
-                                                                        110),
-                LCD_RGBPACK(111, 111, 111), LCD_RGBPACK(112, 112, 112), LCD_RGBPACK(113,
-                                                                        113,
-                                                                        113),
-                LCD_RGBPACK(114, 114, 114), LCD_RGBPACK(115, 115, 115), LCD_RGBPACK(116,
-                                                                        116,
-                                                                        116),
-                LCD_RGBPACK(117, 117, 117), LCD_RGBPACK(118, 118, 118), LCD_RGBPACK(119,
-                                                                        119,
-                                                                        119),
-                LCD_RGBPACK(120, 120, 120), LCD_RGBPACK(121, 121, 121), LCD_RGBPACK(122,
-                                                                        122,
-                                                                        122),
-                LCD_RGBPACK(123, 123, 123), LCD_RGBPACK(124, 124, 124), LCD_RGBPACK(125,
-                                                                        125,
-                                                                        125),
-                LCD_RGBPACK(126, 126, 126), LCD_RGBPACK(127, 127, 127), LCD_RGBPACK(128,
-                                                                        128,
-                                                                        128),
-                LCD_RGBPACK(129, 129, 129), LCD_RGBPACK(130, 130, 130), LCD_RGBPACK(131,
-                                                                        131,
-                                                                        131),
-                LCD_RGBPACK(132, 132, 132), LCD_RGBPACK(133, 133, 133), LCD_RGBPACK(134,
-                                                                        134,
-                                                                        134),
-                LCD_RGBPACK(135, 135, 135), LCD_RGBPACK(136, 136, 136), LCD_RGBPACK(137,
-                                                                        137,
-                                                                        137),
-                LCD_RGBPACK(138, 138, 138), LCD_RGBPACK(139, 139, 139), LCD_RGBPACK(140,
-                                                                        140,
-                                                                        140),
-                LCD_RGBPACK(141, 141, 141), LCD_RGBPACK(142, 142, 142), LCD_RGBPACK(143,
-                                                                        143,
-                                                                        143),
-                LCD_RGBPACK(144, 144, 144), LCD_RGBPACK(145, 145, 145), LCD_RGBPACK(146,
-                                                                        146,
-                                                                        146),
-                LCD_RGBPACK(147, 147, 147), LCD_RGBPACK(148, 148, 148), LCD_RGBPACK(149,
-                                                                        149,
-                                                                        149),
-                LCD_RGBPACK(150, 150, 150), LCD_RGBPACK(151, 151, 151), LCD_RGBPACK(152,
-                                                                        152,
-                                                                        152),
-                LCD_RGBPACK(153, 153, 153), LCD_RGBPACK(154, 154, 154), LCD_RGBPACK(155,
-                                                                        155,
-                                                                        155),
-                LCD_RGBPACK(156, 156, 156), LCD_RGBPACK(157, 157, 157), LCD_RGBPACK(158,
-                                                                        158,
-                                                                        158),
-                LCD_RGBPACK(159, 159, 159), LCD_RGBPACK(160, 160, 160), LCD_RGBPACK(161,
-                                                                        161,
-                                                                        161),
-                LCD_RGBPACK(162, 162, 162), LCD_RGBPACK(163, 163, 163), LCD_RGBPACK(164,
-                                                                        164,
-                                                                        164),
-                LCD_RGBPACK(165, 165, 165), LCD_RGBPACK(166, 166, 166), LCD_RGBPACK(167,
-                                                                        167,
-                                                                        167),
-                LCD_RGBPACK(168, 168, 168), LCD_RGBPACK(169, 169, 169), LCD_RGBPACK(170,
-                                                                        170,
-                                                                        170),
-                LCD_RGBPACK(171, 171, 171), LCD_RGBPACK(172, 172, 172), LCD_RGBPACK(173,
-                                                                        173,
-                                                                        173),
-                LCD_RGBPACK(174, 174, 174), LCD_RGBPACK(175, 175, 175), LCD_RGBPACK(176,
-                                                                        176,
-                                                                        176),
-                LCD_RGBPACK(177, 177, 177), LCD_RGBPACK(178, 178, 178), LCD_RGBPACK(179,
-                                                                        179,
-                                                                        179),
-                LCD_RGBPACK(180, 180, 180), LCD_RGBPACK(181, 181, 181), LCD_RGBPACK(182,
-                                                                        182,
-                                                                        182),
-                LCD_RGBPACK(183, 183, 183), LCD_RGBPACK(184, 184, 184), LCD_RGBPACK(185,
-                                                                        185,
-                                                                        185),
-                LCD_RGBPACK(186, 186, 186), LCD_RGBPACK(187, 187, 187), LCD_RGBPACK(188,
-                                                                        188,
-                                                                        188),
-                LCD_RGBPACK(189, 189, 189), LCD_RGBPACK(190, 190, 190), LCD_RGBPACK(191,
-                                                                        191,
-                                                                        191),
-                LCD_RGBPACK(192, 192, 192), LCD_RGBPACK(193, 193, 193), LCD_RGBPACK(194,
-                                                                        194,
-                                                                        194),
-                LCD_RGBPACK(195, 195, 195), LCD_RGBPACK(196, 196, 196), LCD_RGBPACK(197,
-                                                                        197,
-                                                                        197),
-                LCD_RGBPACK(198, 198, 198), LCD_RGBPACK(199, 199, 199), LCD_RGBPACK(200,
-                                                                        200,
-                                                                        200),
-                LCD_RGBPACK(201, 201, 201), LCD_RGBPACK(202, 202, 202), LCD_RGBPACK(203,
-                                                                        203,
-                                                                        203),
-                LCD_RGBPACK(204, 204, 204), LCD_RGBPACK(205, 205, 205), LCD_RGBPACK(206,
-                                                                        206,
-                                                                        206),
-                LCD_RGBPACK(207, 207, 207), LCD_RGBPACK(208, 208, 208), LCD_RGBPACK(209,
-                                                                        209,
-                                                                        209),
-                LCD_RGBPACK(210, 210, 210), LCD_RGBPACK(211, 211, 211), LCD_RGBPACK(212,
-                                                                        212,
-                                                                        212),
-                LCD_RGBPACK(213, 213, 213), LCD_RGBPACK(214, 214, 214), LCD_RGBPACK(215,
-                                                                        215,
-                                                                        215),
-                LCD_RGBPACK(216, 216, 216), LCD_RGBPACK(217, 217, 217), LCD_RGBPACK(218,
-                                                                        218,
-                                                                        218),
-                LCD_RGBPACK(219, 219, 219), LCD_RGBPACK(220, 220, 220), LCD_RGBPACK(221,
-                                                                        221,
-                                                                        221),
-                LCD_RGBPACK(222, 222, 222), LCD_RGBPACK(223, 223, 223), LCD_RGBPACK(224,
-                                                                        224,
-                                                                        224),
-                LCD_RGBPACK(225, 225, 225), LCD_RGBPACK(226, 226, 226), LCD_RGBPACK(227,
-                                                                        227,
-                                                                        227),
-                LCD_RGBPACK(228, 228, 228), LCD_RGBPACK(229, 229, 229), LCD_RGBPACK(230,
-                                                                        230,
-                                                                        230),
-                LCD_RGBPACK(231, 231, 231), LCD_RGBPACK(232, 232, 232), LCD_RGBPACK(233,
-                                                                        233,
-                                                                        233),
-                LCD_RGBPACK(234, 234, 234), LCD_RGBPACK(235, 235, 235), LCD_RGBPACK(236,
-                                                                        236,
-                                                                        236),
-                LCD_RGBPACK(237, 237, 237), LCD_RGBPACK(238, 238, 238), LCD_RGBPACK(239,
-                                                                        239,
-                                                                        239),
-                LCD_RGBPACK(240, 240, 240), LCD_RGBPACK(241, 241, 241), LCD_RGBPACK(242,
-                                                                        242,
-                                                                        242),
-                LCD_RGBPACK(243, 243, 243), LCD_RGBPACK(244, 244, 244), LCD_RGBPACK(245,
-                                                                        245,
-                                                                        245),
-                LCD_RGBPACK(246, 246, 246), LCD_RGBPACK(247, 247, 247), LCD_RGBPACK(248,
-                                                                        248,
-                                                                        248),
-                LCD_RGBPACK(249, 249, 249), LCD_RGBPACK(250, 250, 250), LCD_RGBPACK(251,
-                                                                        251,
-                                                                        251),
-                LCD_RGBPACK(252, 252, 252), LCD_RGBPACK(253, 253, 253), LCD_RGBPACK(254,
-                                                                        254,
-                                                                        254),
-                LCD_RGBPACK(255, 255, 255) };
-
+#ifdef HAVE_LCD_COLOR
+#define COLORS 256
+static unsigned int colors[COLORS] = { LCD_RGBPACK(0, 0, 23), LCD_RGBPACK(0, 0, 26),
+        LCD_RGBPACK(0, 0, 28), LCD_RGBPACK(0, 0, 31), LCD_RGBPACK(0, 0, 33),
+        LCD_RGBPACK(0, 0, 36), LCD_RGBPACK(0, 0, 38), LCD_RGBPACK(0, 0, 41),
+        LCD_RGBPACK(0, 0, 43), LCD_RGBPACK(0, 0, 46), LCD_RGBPACK(0, 0, 48),
+        LCD_RGBPACK(0, 0, 50), LCD_RGBPACK(0, 0, 53), LCD_RGBPACK(0, 0, 55),
+        LCD_RGBPACK(0, 0, 58), LCD_RGBPACK(0, 0, 59), LCD_RGBPACK(0, 0, 62),
+        LCD_RGBPACK(0, 0, 64), LCD_RGBPACK(0, 0, 66), LCD_RGBPACK(0, 0, 69),
+        LCD_RGBPACK(0, 0, 71), LCD_RGBPACK(0, 0, 73), LCD_RGBPACK(0, 0, 75),
+        LCD_RGBPACK(0, 0, 77), LCD_RGBPACK(0, 0, 79), LCD_RGBPACK(1, 0, 81),
+        LCD_RGBPACK(4, 0, 83), LCD_RGBPACK(7, 0, 85), LCD_RGBPACK(9, 0, 87),
+        LCD_RGBPACK(9, 0, 87), LCD_RGBPACK(12, 0, 89), LCD_RGBPACK(15, 0, 91),
+        LCD_RGBPACK(16, 0, 92), LCD_RGBPACK(19, 0, 94), LCD_RGBPACK(22, 0, 96),
+        LCD_RGBPACK(24, 0, 97), LCD_RGBPACK(27, 0, 99),
+        LCD_RGBPACK(30, 0, 101), LCD_RGBPACK(32, 0, 102),
+        LCD_RGBPACK(35, 0, 104), LCD_RGBPACK(38, 0, 105),
+        LCD_RGBPACK(40, 0, 107), LCD_RGBPACK(43, 0, 108),
+        LCD_RGBPACK(45, 0, 109), LCD_RGBPACK(47, 0, 111),
+        LCD_RGBPACK(50, 0, 112), LCD_RGBPACK(53, 0, 113),
+        LCD_RGBPACK(55, 0, 114), LCD_RGBPACK(58, 0, 115),
+        LCD_RGBPACK(60, 0, 116), LCD_RGBPACK(63, 0, 118),
+        LCD_RGBPACK(65, 0, 119), LCD_RGBPACK(68, 0, 120),
+        LCD_RGBPACK(70, 0, 120), LCD_RGBPACK(72, 0, 121),
+        LCD_RGBPACK(75, 0, 122), LCD_RGBPACK(78, 0, 123),
+        LCD_RGBPACK(80, 0, 123), LCD_RGBPACK(83, 0, 124),
+        LCD_RGBPACK(85, 0, 125), LCD_RGBPACK(88, 0, 125),
+        LCD_RGBPACK(90, 0, 126), LCD_RGBPACK(93, 0, 125),
+        LCD_RGBPACK(95, 0, 126), LCD_RGBPACK(97, 0, 126),
+        LCD_RGBPACK(99, 0, 127), LCD_RGBPACK(101, 0, 127),
+        LCD_RGBPACK(101, 0, 127), LCD_RGBPACK(104, 0, 127),
+        LCD_RGBPACK(106, 0, 126), LCD_RGBPACK(109, 0, 127),
+        LCD_RGBPACK(111, 0, 127), LCD_RGBPACK(114, 0, 126),
+        LCD_RGBPACK(116, 0, 127), LCD_RGBPACK(118, 0, 127),
+        LCD_RGBPACK(120, 0, 127), LCD_RGBPACK(123, 0, 126),
+        LCD_RGBPACK(125, 0, 125), LCD_RGBPACK(127, 0, 126),
+        LCD_RGBPACK(130, 0, 125), LCD_RGBPACK(131, 0, 124),
+        LCD_RGBPACK(134, 0, 124), LCD_RGBPACK(136, 0, 123),
+        LCD_RGBPACK(138, 0, 122), LCD_RGBPACK(140, 0, 122),
+        LCD_RGBPACK(142, 0, 121), LCD_RGBPACK(144, 0, 120),
+        LCD_RGBPACK(147, 0, 119), LCD_RGBPACK(149, 0, 119),
+        LCD_RGBPACK(151, 0, 118), LCD_RGBPACK(153, 0, 117),
+        LCD_RGBPACK(155, 0, 115), LCD_RGBPACK(157, 0, 114),
+        LCD_RGBPACK(159, 0, 113), LCD_RGBPACK(162, 0, 112),
+        LCD_RGBPACK(164, 0, 111), LCD_RGBPACK(165, 0, 110),
+        LCD_RGBPACK(167, 0, 109), LCD_RGBPACK(169, 0, 108),
+        LCD_RGBPACK(171, 0, 106), LCD_RGBPACK(173, 0, 105),
+        LCD_RGBPACK(175, 0, 103), LCD_RGBPACK(176, 0, 102),
+        LCD_RGBPACK(178, 0, 100), LCD_RGBPACK(178, 0, 100),
+        LCD_RGBPACK(180, 0, 98), LCD_RGBPACK(182, 0, 97),
+        LCD_RGBPACK(184, 0, 95), LCD_RGBPACK(186, 0, 93),
+        LCD_RGBPACK(188, 0, 91), LCD_RGBPACK(189, 0, 89),
+        LCD_RGBPACK(190, 0, 87), LCD_RGBPACK(192, 0, 86),
+        LCD_RGBPACK(194, 0, 84), LCD_RGBPACK(196, 0, 82),
+        LCD_RGBPACK(197, 0, 80), LCD_RGBPACK(199, 0, 78),
+        LCD_RGBPACK(201, 0, 76), LCD_RGBPACK(202, 0, 74),
+        LCD_RGBPACK(204, 0, 72), LCD_RGBPACK(206, 0, 70),
+        LCD_RGBPACK(207, 0, 67), LCD_RGBPACK(209, 0, 65),
+        LCD_RGBPACK(210, 0, 63), LCD_RGBPACK(212, 0, 60),
+        LCD_RGBPACK(213, 0, 58), LCD_RGBPACK(215, 0, 56),
+        LCD_RGBPACK(216, 0, 53), LCD_RGBPACK(216, 0, 52),
+        LCD_RGBPACK(218, 0, 49), LCD_RGBPACK(219, 0, 47),
+        LCD_RGBPACK(221, 0, 44), LCD_RGBPACK(222, 0, 42),
+        LCD_RGBPACK(223, 0, 39), LCD_RGBPACK(224, 0, 37),
+        LCD_RGBPACK(226, 0, 34), LCD_RGBPACK(227, 0, 32),
+        LCD_RGBPACK(228, 0, 29), LCD_RGBPACK(229, 0, 27),
+        LCD_RGBPACK(230, 0, 25), LCD_RGBPACK(231, 0, 22),
+        LCD_RGBPACK(232, 0, 19), LCD_RGBPACK(232, 0, 19),
+        LCD_RGBPACK(233, 0, 17), LCD_RGBPACK(235, 0, 14),
+        LCD_RGBPACK(236, 0, 12), LCD_RGBPACK(237, 0, 9),
+        LCD_RGBPACK(238, 0, 6), LCD_RGBPACK(239, 0, 4), LCD_RGBPACK(239, 0, 1),
+        LCD_RGBPACK(240, 1, 0), LCD_RGBPACK(241, 6, 0),
+        LCD_RGBPACK(242, 11, 0), LCD_RGBPACK(243, 16, 0),
+        LCD_RGBPACK(244, 21, 0), LCD_RGBPACK(244, 26, 0),
+        LCD_RGBPACK(245, 31, 0), LCD_RGBPACK(246, 36, 0),
+        LCD_RGBPACK(247, 41, 0), LCD_RGBPACK(247, 46, 0),
+        LCD_RGBPACK(247, 50, 0), LCD_RGBPACK(248, 55, 0),
+        LCD_RGBPACK(248, 60, 0), LCD_RGBPACK(249, 65, 0),
+        LCD_RGBPACK(249, 70, 0), LCD_RGBPACK(250, 75, 0),
+        LCD_RGBPACK(250, 79, 0), LCD_RGBPACK(251, 84, 0),
+        LCD_RGBPACK(252, 89, 0), LCD_RGBPACK(251, 94, 0),
+        LCD_RGBPACK(252, 99, 0), LCD_RGBPACK(253, 103, 0),
+        LCD_RGBPACK(252, 108, 0),
+        LCD_RGBPACK(253, 112, 0), LCD_RGBPACK(254, 117, 0),
+        LCD_RGBPACK(254, 121, 0), LCD_RGBPACK(253, 125, 0),
+        LCD_RGBPACK(254, 130, 0), LCD_RGBPACK(255, 134, 0),
+        LCD_RGBPACK(255, 137, 0), LCD_RGBPACK(255, 138, 0),
+        LCD_RGBPACK(255, 142, 0), LCD_RGBPACK(255, 147, 0),
+        LCD_RGBPACK(255, 151, 0), LCD_RGBPACK(255, 154, 0),
+        LCD_RGBPACK(255, 158, 0), LCD_RGBPACK(255, 162, 0),
+        LCD_RGBPACK(255, 166, 0), LCD_RGBPACK(255, 170, 0),
+        LCD_RGBPACK(255, 174, 0), LCD_RGBPACK(255, 178, 0),
+        LCD_RGBPACK(255, 181, 0), LCD_RGBPACK(255, 184, 0),
+        LCD_RGBPACK(255, 187, 0), LCD_RGBPACK(255, 191, 0),
+        LCD_RGBPACK(255, 194, 0), LCD_RGBPACK(255, 197, 0),
+        LCD_RGBPACK(255, 201, 0), LCD_RGBPACK(255, 204, 3),
+        LCD_RGBPACK(255, 207, 8), LCD_RGBPACK(255, 210, 12),
+        LCD_RGBPACK(255, 213, 17), LCD_RGBPACK(255, 215, 21),
+        LCD_RGBPACK(255, 217, 26), LCD_RGBPACK(255, 220,30),
+        LCD_RGBPACK(255, 223, 34), LCD_RGBPACK(255, 225, 39),
+        LCD_RGBPACK(255, 228, 44),
+        LCD_RGBPACK(255, 229, 48), LCD_RGBPACK(255, 231, 53),
+        LCD_RGBPACK(255, 233, 57),
+        LCD_RGBPACK(255, 235, 61), LCD_RGBPACK(255, 237, 66),
+        LCD_RGBPACK(255, 239, 71),
+        LCD_RGBPACK(255, 241, 75), LCD_RGBPACK(255, 243, 80),
+        LCD_RGBPACK(255, 244, 84),
+        LCD_RGBPACK(255, 246, 88), LCD_RGBPACK(255, 246, 88),
+        LCD_RGBPACK(255, 247, 93),
+        LCD_RGBPACK(255, 248, 97), LCD_RGBPACK(255, 249, 102),
+        LCD_RGBPACK(255, 250, 107), LCD_RGBPACK(255, 251, 111),
+        LCD_RGBPACK(255, 251, 115), LCD_RGBPACK(255, 252, 120),
+        LCD_RGBPACK(255, 252, 124), LCD_RGBPACK(255, 253, 129),
+        LCD_RGBPACK(255, 253, 133), LCD_RGBPACK(255, 254, 138),
+        LCD_RGBPACK(255, 255, 143), LCD_RGBPACK(255, 255, 147),
+        LCD_RGBPACK(255, 255, 151), LCD_RGBPACK(255, 255, 156),
+        LCD_RGBPACK(255, 255, 160), LCD_RGBPACK(255, 255, 165),
+        LCD_RGBPACK(255, 255, 170), LCD_RGBPACK(255, 255, 174),
+        LCD_RGBPACK(255, 255, 178), LCD_RGBPACK(255, 255, 183),
+        LCD_RGBPACK(255, 255, 187), LCD_RGBPACK(255, 255, 192),
+        LCD_RGBPACK(255, 255, 196), LCD_RGBPACK(255, 255, 200),
+        LCD_RGBPACK(255, 255, 205), LCD_RGBPACK(255, 255, 210),
+        LCD_RGBPACK(255, 255, 214), LCD_RGBPACK(255, 255, 219),
+        LCD_RGBPACK(255, 255, 223), LCD_RGBPACK(255, 255, 227),
+        LCD_RGBPACK(255, 255, 232), LCD_RGBPACK(255, 255, 236),
+        LCD_RGBPACK(255, 255, 241), LCD_RGBPACK(255, 255, 246),
+        LCD_RGBPACK(255, 255, 250), LCD_RGBPACK(255, 255, 255) };
+#endif
 static long next_update = 0;
 
 void draw_lines_vertical(void);
 void draw_lines_horizontal(void);
 void draw_bars_vertical(void);
 void draw_bars_horizontal(void);
+void draw_spectrogram_vertical(void);
+void draw_spectrogram_horizontal(void);
 
 void draw(char mode, const unsigned char* message)
 {
-    static uint32_t show_message = 0;
+    static uint32_t show_message = 0, last_mode = 0;
+    static bool last_orientation = true;
     static unsigned char* last_message = 0;
     if (message != 0)
     {
@@ -516,28 +506,53 @@ void draw(char mode, const unsigned char* message)
         show_message = 5;
     }
 
-    rb->lcd_clear_display();
     switch (mode)
     {
         default:
         case 0: {
+            rb->lcd_clear_display();
+
             if (graph_settings.orientation_vertical)
                 draw_lines_vertical();
             else
                 draw_lines_horizontal();
+
+            last_mode = 0;
+            spectrogram_settings.row = 0; spectrogram_settings.column = 0;
             break;
         }
         case 1: {
+            rb->lcd_clear_display();
+
             if(graph_settings.orientation_vertical)
                 draw_bars_vertical();
             else
                 draw_bars_horizontal();
+
+            last_mode = 1;
+            spectrogram_settings.row = 0; spectrogram_settings.column = 0;
+            break;
+        }
+        case 2: {
+            if(last_mode != 2 ||
+               graph_settings.orientation_vertical != last_orientation)
+            {
+                spectrogram_settings.row = 0; spectrogram_settings.column = 0;
+                rb->lcd_clear_display();
+            }
+            if(graph_settings.orientation_vertical)
+                draw_spectrogram_vertical();
+            else
+                draw_spectrogram_horizontal();
+
+            last_mode = 2;
             break;
         }
     }
 
-    if (show_message > 0)
+    if (show_message > 0 && mode != 2)
     {
+        /* TODO: figure out how to draw the popups with a spectrogram*/
         int x, y;
         rb->lcd_getstringsize(last_message, &x, &y);
         x += 6; /* 3 px of horizontal padding and */
@@ -545,14 +560,17 @@ void draw(char mode, const unsigned char* message)
 
         rb->lcd_set_foreground(LCD_DARKGRAY);
         rb->lcd_set_background(LCD_DARKGRAY);
-        rb->lcd_fillrect(LCD_WIDTH - x, 0, LCD_WIDTH, y);
+        rb->lcd_fillrect(LCD_WIDTH-1-x, 0, LCD_WIDTH-1, y);
 
         rb->lcd_set_foreground(LCD_DEFAULT_FG);
-        rb->lcd_putsxy(LCD_WIDTH - x + 3, 2, last_message);
+        rb->lcd_putsxy(LCD_WIDTH-1-x+3, 2, last_message);
         rb->lcd_set_background(LCD_DEFAULT_BG);
 
         show_message--;
     }
+
+    last_orientation = graph_settings.orientation_vertical;
+
     rb->lcd_update();
 
     /* we still have time in our time slot, so we sleep() */
@@ -593,9 +611,19 @@ void draw_lines_vertical(void)
         vfactor = Q15_DIV(LCD_HEIGHT << 15, max << 15); /* s16.15 */
 
 #ifdef HAVE_LCD_COLOR
-    if(!graph_settings.colored)
+    if(graph_settings.colored)
     {
-        rb->lcd_set_foreground(LCD_DEFAULT_FG);
+        int line;
+        for(line = 0; line < LCD_HEIGHT; ++line)
+        {
+            int32_t color = Q_DIV((line+1) << 16, LCD_HEIGHT << 16, 16);
+            color = Q_MUL(color, (COLORS-1) << 16, 16) >> 16;
+            rb->lcd_set_foreground(colors[color]);
+            rb->lcd_drawline(0, LCD_HEIGHT-line-1,
+                             LCD_WIDTH-1, LCD_HEIGHT-line-1);
+        }
+        /* Erase the lines with the background color */
+        rb->lcd_set_foreground(rb->lcd_get_background());
     }
 #endif
 
@@ -652,15 +680,15 @@ void draw_lines_vertical(void)
         {
 #       ifdef HAVE_LCD_COLOR
             if(graph_settings.colored)
-            {
-                int32_t color = Q15_DIV(y << 15, LCD_HEIGHT << 15);
-                color = Q15_MUL(color, 255 << 15) >> 15;
-                rb->lcd_set_foreground(colors[color]);
-            }
+                rb->lcd_drawline(x, 0, x, LCD_HEIGHT-y);
+            else
 #       endif
-            rb->lcd_drawline(x, LCD_HEIGHT, x, LCD_HEIGHT - y);
+            rb->lcd_drawline(x, LCD_HEIGHT-1 , x, LCD_HEIGHT-y-1);
         }
     }
+#   ifdef HAVE_LCD_COLOR
+    rb->lcd_set_foreground(LCD_DEFAULT_FG);
+#   endif
 }
 
 void draw_lines_horizontal(void)
@@ -688,14 +716,23 @@ void draw_lines_horizontal(void)
     int32_t hfactor;
 
     if (graph_settings.logarithmic)
-        hfactor = Q_DIV(LCD_WIDTH << 16, max, 16); /* s15.16 */
+        hfactor = Q_DIV((LCD_WIDTH - 1) << 16, max, 16); /* s15.16 */
     else
-        hfactor = Q15_DIV(LCD_WIDTH << 15, max << 15); /* s16.15 */
+        hfactor = Q15_DIV((LCD_WIDTH - 1) << 15, max << 15); /* s16.15 */
 
 #ifdef HAVE_LCD_COLOR
-    if(!graph_settings.colored)
+    if(graph_settings.colored)
     {
-        rb->lcd_set_foreground(LCD_DEFAULT_FG);
+        int line;
+        for(line = 0; line < LCD_WIDTH; ++line)
+        {
+            int32_t color = Q_DIV((line+1) << 16, LCD_WIDTH << 16, 16);
+            color = Q_MUL(color, (COLORS-1) << 16, 16) >> 16;
+            rb->lcd_set_foreground(colors[color]);
+            rb->lcd_drawline(line, 0, line, LCD_HEIGHT-1);
+        }
+        /* Erase the lines with the background color */
+        rb->lcd_set_foreground(rb->lcd_get_background());
     }
 #endif
 
@@ -752,14 +789,16 @@ void draw_lines_horizontal(void)
 #       ifdef HAVE_LCD_COLOR
             if(graph_settings.colored)
             {
-                int32_t color = Q15_DIV(x << 15, LCD_WIDTH << 15);
-                color = Q15_MUL(color, 255 << 15) >> 15;
-                rb->lcd_set_foreground(colors[color]);
+                rb->lcd_drawline(LCD_WIDTH-1, y, x, y);
             }
+            else
 #       endif
             rb->lcd_drawline(0, y, x, y);
         }
     }
+#   ifdef HAVE_LCD_COLOR
+    rb->lcd_set_foreground(LCD_DEFAULT_FG);
+#   endif
 }
 
 void draw_bars_vertical(void)
@@ -888,6 +927,133 @@ void draw_bars_horizontal(void)
     }
 }
 
+#define QDB_MAX 454934
+#define LIN_MAX 1034
+void draw_spectrogram_vertical(void)
+{
+    const int32_t scale_factor =
+            ( Q15_DIV(ARRAYSIZE_PLOT << 15, LCD_HEIGHT << 15) + (1<<14) ) >> 15,
+        remaining_div =
+            ( Q15_DIV((scale_factor*LCD_HEIGHT) << 15,
+                      (ARRAYSIZE_PLOT-scale_factor*LCD_HEIGHT) << 15)
+             + (1<<14) ) >> 15;
+
+    static int max = 0;
+    int nmax = calc_magnitudes(graph_settings.logarithmic);
+    if (nmax > max)
+        max = nmax, DEBUGF("New maximum: %i\n", max);
+
+    int i, y = LCD_HEIGHT-1, count = 0, rem_count = 0;
+    int64_t avg = 0;
+    for(i = 0; i < ARRAYSIZE_PLOT; ++i)
+    {
+        avg += plot[i];
+        ++count;
+        ++rem_count;
+
+        /* Kinda hacky - due to the rounding in scale_factor, we try to
+         * sneak the extra values (almost) uniformly in our calculations*/
+        if(remaining_div > 0 && rem_count == remaining_div &&
+                (i+1) < ARRAYSIZE_PLOT)
+        {
+            ++i;
+            avg += plot[i];
+            rem_count = 0;
+        }
+
+        if(count >= scale_factor)
+        {
+            if(rem_count == 0) /* if we just added an extra value */
+                ++count;
+
+            int32_t color;
+            if(graph_settings.logarithmic)
+            {
+                avg = Q_DIV(avg, count << 16, 16);
+                color = Q_DIV(avg, QDB_MAX, 16);
+                color = Q_MUL(color, (COLORS-1) << 16, 16) >> 16;
+            }
+            else
+            {
+                avg = Q15_DIV(avg << 15, count << 15);
+                color = Q15_DIV(avg, LIN_MAX << 15);
+                color = Q15_MUL(color, (COLORS-1) << 15) >> 15;
+            }
+            rb->lcd_set_foreground(colors[color]);
+            rb->lcd_drawpixel(spectrogram_settings.column, y);
+
+            y--;
+
+            avg = 0;
+            count = 0;
+        }
+    }
+    if(spectrogram_settings.column != LCD_WIDTH - 1)
+        spectrogram_settings.column++;
+    else
+        xlcd_scroll_left(1);
+}
+void draw_spectrogram_horizontal(void)
+{
+    const int32_t scale_factor =
+            ( Q15_DIV(ARRAYSIZE_PLOT << 15, LCD_WIDTH << 15)) >> 15,
+        remaining_div =
+            ( Q15_DIV((scale_factor*LCD_WIDTH) << 15,
+                      (ARRAYSIZE_PLOT-scale_factor*LCD_WIDTH) << 15)
+             + (1<<14) ) >> 15;
+
+    calc_magnitudes(graph_settings.logarithmic);
+
+    int i, x = 0, count = 0, rem_count = 0;
+    int64_t avg = 0;
+    for(i = 0; i < ARRAYSIZE_PLOT; ++i)
+    {
+        avg += plot[i];
+        ++count;
+        ++rem_count;
+
+        /* Kinda hacky - due to the rounding in scale_factor, we try to
+         * sneak the extra values (almost) uniformly in our calculations*/
+        if(remaining_div > 0 && rem_count == remaining_div &&
+                (i+1) < ARRAYSIZE_PLOT)
+        {
+            ++i;
+            avg += plot[i];
+            rem_count = 0;
+        }
+
+        if(count >= scale_factor)
+        {
+            if(rem_count == 0) /* if we just added an extra value */
+                ++count;
+
+            int32_t color;
+            if(graph_settings.logarithmic)
+            {
+                avg = Q_DIV(avg, count << 16, 16);
+                color = Q_DIV(avg, QDB_MAX, 16);
+                color = Q_MUL(color, (COLORS-1) << 16, 16) >> 16;
+            }
+            else
+            {
+                avg = Q15_DIV(avg << 15, count << 15);
+                color = Q15_DIV(avg, LIN_MAX << 15);
+                color = Q15_MUL(color, (COLORS-1) << 15) >> 15;
+            }
+            rb->lcd_set_foreground(colors[color]);
+            rb->lcd_drawpixel(x, spectrogram_settings.row);
+
+            x++;
+
+            avg = 0;
+            count = 0;
+        }
+    }
+    if(spectrogram_settings.row != LCD_HEIGHT-1)
+        spectrogram_settings.row++;
+    else
+        xlcd_scroll_up(1);
+}
 /********************* End of plotting functions (modes) *********************/
 
 enum plugin_status plugin_start(const void* parameter)
@@ -905,11 +1071,13 @@ enum plugin_status plugin_start(const void* parameter)
     /* Defaults */
     bool run = true;
     int mode = 0;
-    graph_settings.logarithmic = true;
+    graph_settings.logarithmic = false;
     graph_settings.orientation_vertical = true;
+    graph_settings.window_func = 0;
 #ifdef HAVE_LCD_COLOR
     graph_settings.colored = false; /* doesn't do anything yet*/
 #endif
+    bool changed_window = false;
 
     /* set the end of the first time slot - rest of the
      * next_update work is done in draw() */
@@ -962,13 +1130,19 @@ enum plugin_status plugin_start(const void* parameter)
 
         if (fft_idx == ARRAYSIZE_IN)
         {
-            apply_window_func();
+            apply_window_func(graph_settings.window_func);
 
             /* Play nice - the sleep at the end of draw()
              * only tries to maintain the frame rate */
             rb->yield();
             FFT_FFT(state, input, output);
-            draw(mode, 0);
+            if(changed_window)
+            {
+                draw(mode, window_text[graph_settings.window_func]);
+                changed_window = false;
+            }
+            else
+                draw(mode, 0);
 
             fft_idx = 0;
         };
@@ -991,6 +1165,13 @@ enum plugin_status plugin_start(const void* parameter)
                 if (mode >= MODES_COUNT)
                     mode = 0;
                 draw(mode, modes_text[(int) mode]);
+                break;
+            }
+            case FFT_WINDOW: {
+                changed_window = true;
+                graph_settings.window_func ++;
+                if(graph_settings.window_func >= WINDOW_COUNT)
+                    graph_settings.window_func = 0;
                 break;
             }
             case FFT_SCALE: {
