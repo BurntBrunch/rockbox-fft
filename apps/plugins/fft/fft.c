@@ -550,23 +550,51 @@ void draw(char mode, const unsigned char* message)
         }
     }
 
-    if (show_message > 0 && mode != 2)
+    if (show_message > 0)
     {
-        /* TODO: figure out how to draw the popups with a spectrogram*/
         int x, y;
         rb->lcd_getstringsize(last_message, &x, &y);
         x += 6; /* 3 px of horizontal padding and */
         y += 4; /* 2 px of vertical padding */
 
+        if(mode == 2)
+        {
+            if (graph_settings.orientation_vertical)
+            {
+                if(spectrogram_settings.column > LCD_WIDTH-x-2)
+                {
+                    xlcd_scroll_left(spectrogram_settings.column -
+                                     (LCD_WIDTH - x - 1));
+                    spectrogram_settings.column = LCD_WIDTH - x - 2;
+                }
+            }
+        }
+
         rb->lcd_set_foreground(LCD_DARKGRAY);
-        rb->lcd_set_background(LCD_DARKGRAY);
         rb->lcd_fillrect(LCD_WIDTH-1-x, 0, LCD_WIDTH-1, y);
 
         rb->lcd_set_foreground(LCD_DEFAULT_FG);
+        rb->lcd_set_background(LCD_DARKGRAY);
         rb->lcd_putsxy(LCD_WIDTH-1-x+3, 2, last_message);
         rb->lcd_set_background(LCD_DEFAULT_BG);
 
         show_message--;
+        if(show_message == 0 && mode == 2)
+        {
+            if(graph_settings.orientation_vertical)
+            {
+                rb->lcd_set_drawmode(DRMODE_SOLID | DRMODE_INVERSEVID);
+                rb->lcd_fillrect(LCD_WIDTH-1-x, 0, LCD_WIDTH-1, y);
+                rb->lcd_set_drawmode(DRMODE_SOLID);
+            }
+            else
+            {
+                xlcd_scroll_up(y);
+                spectrogram_settings.row -= y;
+                if(spectrogram_settings.row < 0)
+                    spectrogram_settings.row = 0;
+            }
+        }
     }
 
     last_orientation = graph_settings.orientation_vertical;
@@ -952,7 +980,7 @@ void draw_spectrogram_vertical(void)
         ++rem_count;
 
         /* Kinda hacky - due to the rounding in scale_factor, we try to
-         * sneak the extra values (almost) uniformly in our calculations*/
+         * uniformly interweave the extra values in our calculations */
         if(remaining_div > 0 && rem_count == remaining_div &&
                 (i+1) < ARRAYSIZE_PLOT)
         {
@@ -1013,7 +1041,7 @@ void draw_spectrogram_horizontal(void)
         ++rem_count;
 
         /* Kinda hacky - due to the rounding in scale_factor, we try to
-         * sneak the extra values (almost) uniformly in our calculations*/
+         * uniformly interweave the extra values in our calculations */
         if(remaining_div > 0 && rem_count == remaining_div &&
                 (i+1) < ARRAYSIZE_PLOT)
         {
@@ -1071,7 +1099,7 @@ enum plugin_status plugin_start(const void* parameter)
     /* Defaults */
     bool run = true;
     int mode = 0;
-    graph_settings.logarithmic = false;
+    graph_settings.logarithmic = true;
     graph_settings.orientation_vertical = true;
     graph_settings.window_func = 0;
 #ifdef HAVE_LCD_COLOR
