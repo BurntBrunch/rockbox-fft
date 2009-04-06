@@ -193,44 +193,18 @@ PLUGIN_HEADER
 #   endif
 #endif
 
-#ifdef FFTR
-#	include "kiss_fftr.h"
-#else
-#	include "kiss_fft.h"
-#endif
-
+#include "kiss_fft.h"
 #include "_kiss_fft_guts.h" /* sizeof(struct kiss_fft_state) */
 
-#ifdef FFTR /* Real numbers FFT */
-#   define ARRAYSIZE_IN FFT_SIZE
-#   define ARRAYSIZE_OUT (FFT_SIZE/2)
-#	define ARRAYSIZE_PLOT ARRAYSIZE_OUT
-
-#   define BUFSIZE (sizeof(struct kiss_fftr_state) + \
-(sizeof(struct kiss_fft_state) + sizeof(kiss_fft_cpx)*(FFT_SIZE-1)) + \
-sizeof(kiss_fft_cpx) * ( FFT_SIZE * 3 / 2))
-
-#define FFT_ALLOC kiss_fftr_alloc
-#define FFT_FFT   kiss_fftr
-#define FFT_CFG   kiss_fftr_cfg
-
-#else /* Normal FFT */
-#   define ARRAYSIZE_IN FFT_SIZE
-#   define ARRAYSIZE_OUT FFT_SIZE
-#	define ARRAYSIZE_PLOT FFT_SIZE/2
-#   define BUFSIZE (sizeof(struct kiss_fft_state) + \
-sizeof(kiss_fft_cpx)*(FFT_SIZE-1))
+#define ARRAYSIZE_IN FFT_SIZE
+#define ARRAYSIZE_OUT FFT_SIZE
+#define ARRAYSIZE_PLOT FFT_SIZE/2
+#define BUFSIZE (sizeof(struct kiss_fft_state)+sizeof(kiss_fft_cpx)*(FFT_SIZE-1))
 #define FFT_ALLOC kiss_fft_alloc
 #define FFT_FFT   kiss_fft
 #define FFT_CFG   kiss_fft_cfg
-#endif
 
-#ifdef FFTR
-static kiss_fft_scalar input[ARRAYSIZE_IN];
-#else
 static kiss_fft_cpx input[ARRAYSIZE_IN];
-#endif
-
 static kiss_fft_cpx output[ARRAYSIZE_OUT];
 static int32_t plot[ARRAYSIZE_PLOT];
 static char buffer[BUFSIZE];
@@ -1144,12 +1118,9 @@ enum plugin_status plugin_start(const void* parameter)
 
             right = *(value + idx);
             idx += 2;
-#ifdef FFTR
-            input[fft_idx] = left/2 + right/2;
-#else
+
             input[fft_idx].r = left;
             input[fft_idx].i = right;
-#endif
             fft_idx++;
 
             if (fft_idx == ARRAYSIZE_IN)
