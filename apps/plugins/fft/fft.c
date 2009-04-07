@@ -193,11 +193,6 @@ static int32_t plot[ARRAYSIZE_PLOT];
 static char buffer[BUFSIZE];
 
 /************************* Math functions *************************/
-
-#define QE float_q(2.718281828, 16)
-#define LOGE_TEN 2.302585093
-#define QLOGE_TEN float_q(LOGE_TEN, 16)
-
 #define QLOG_MAX (4 << 16)
 #define LIN_MAX 1034
 #define QLIN_MAX 67795525
@@ -206,12 +201,6 @@ static char buffer[BUFSIZE];
 int32_t get_log_value(int32_t value, bool fraction)
 {
     int32_t result;
-    /* ln (value)*/
-    //result = flog((fraction ? value : value << 16));
-
-    /* Not worth it to add routines for negative values
-     * (less than 2.6% of all values) */
-    //return (result < 0) ? 0 : result;
 
     if(fraction)
         value = Q16_MUL(30720 << 16, Q16_DIV(value, QLIN_MAX)) >> 16;
