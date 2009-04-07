@@ -1,5 +1,5 @@
 /***************************************************************************
- *             __________               __   ___.
+*             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
  *   Source     |       _//  _ \_/ ___\|  |/ /| __ \ /  _ \  \/  /
  *   Jukebox    |    |   (  <_> )  \___|    < | \_\ (  <_> > <  <
@@ -26,29 +26,11 @@
 
 PLUGIN_HEADER
 
-#if CONFIG_KEYPAD == RECORDER_PAD
+#if CONFIG_KEYPAD == ARCHOS_AV300_PAD
 #   define FFT_PREV_GRAPH     BUTTON_LEFT
 #   define FFT_NEXT_GRAPH    BUTTON_RIGHT
 #   define FFT_ORIENTATION  BUTTON_F3
 #   define FFT_WINDOW     BUTTON_F1
-#   define FFT_SCALE       BUTTON_UP
-#   define FFT_COLOR     BUTTON_DOWN
-#   define FFT_QUIT     BUTTON_OFF
-
-#elif CONFIG_KEYPAD == ARCHOS_AV300_PAD
-#   define FFT_PREV_GRAPH     BUTTON_LEFT
-#   define FFT_NEXT_GRAPH    BUTTON_RIGHT
-#   define FFT_ORIENTATION  BUTTON_F3
-#   define FFT_WINDOW     BUTTON_F1
-#   define FFT_SCALE       BUTTON_UP
-#   define FFT_COLOR     BUTTON_DOWN
-#   define FFT_QUIT     BUTTON_OFF
-
-#elif CONFIG_KEYPAD == ONDIO_PAD
-#   define FFT_PREV_GRAPH     BUTTON_LEFT
-#   define FFT_NEXT_GRAPH    BUTTON_RIGHT
-#   define FFT_ORIENTATION  (BUTTON_MENU | BUTTON_LEFT)
-#   define FFT_WINDOW     (BUTTON_MENU | BUTTON_RIGHT)
 #   define FFT_SCALE       BUTTON_UP
 #   define FFT_COLOR     BUTTON_DOWN
 #   define FFT_QUIT     BUTTON_OFF
@@ -112,12 +94,19 @@ PLUGIN_HEADER
 #   define FFT_QUIT     BUTTON_POWER
 
 #elif (CONFIG_KEYPAD == SANSA_C200_PAD) || \
-(CONFIG_KEYPAD == SANSA_CLIP_PAD) || \
 (CONFIG_KEYPAD == SANSA_M200_PAD)
 #   define FFT_PREV_GRAPH       BUTTON_LEFT
 #   define FFT_NEXT_GRAPH      BUTTON_RIGHT
 #   define FFT_ORIENTATION  BUTTON_UP
 #   define FFT_WINDOW        BUTTON_REC
+#   define FFT_SCALE         BUTTON_SELECT
+#   define FFT_COLOR       BUTTON_DOWN
+#   define FFT_QUIT       BUTTON_POWER
+#elif (CONFIG_KEYPAD == SANSA_CLIP_PAD)
+#   define FFT_PREV_GRAPH       BUTTON_LEFT
+#   define FFT_NEXT_GRAPH      BUTTON_RIGHT
+#   define FFT_ORIENTATION  BUTTON_UP
+#   define FFT_WINDOW        BUTTON_HOME
 #   define FFT_SCALE         BUTTON_SELECT
 #   define FFT_COLOR       BUTTON_DOWN
 #   define FFT_QUIT       BUTTON_POWER
@@ -187,12 +176,6 @@ PLUGIN_HEADER
 
 #define FFT_SIZE (1024)
 
-#if LCD_DEPTH > 1
-#   ifdef HAVE_LCD_COLOR
-#       define FG_GREEN LCD_RGBPACK(128, 255, 0)
-#   endif
-#endif
-
 #include "kiss_fft.h"
 #include "_kiss_fft_guts.h" /* sizeof(struct kiss_fft_state) */
 
@@ -215,17 +198,29 @@ static char buffer[BUFSIZE];
 #define LOGE_TEN 2.302585093
 #define QLOGE_TEN float_q(LOGE_TEN, 16)
 
+#define QLOG_MAX (4 << 16)
+#define LIN_MAX 1034
+#define QLIN_MAX 67795525
+
 /* Returns logarithmically scaled values in S15.16 format */
 int32_t get_log_value(int32_t value, bool fraction)
 {
     int32_t result;
-
     /* ln (value)*/
-    result = flog((fraction ? value : value << 16));
+    //result = flog((fraction ? value : value << 16));
 
     /* Not worth it to add routines for negative values
      * (less than 2.6% of all values) */
-    return (result < 0) ? 0 : result;
+    //return (result < 0) ? 0 : result;
+
+    if(fraction)
+        value = Q16_MUL(30720 << 16, Q16_DIV(value, QLIN_MAX)) >> 16;
+    else
+        value = Q16_MUL(30720 << 16, Q16_DIV(value << 16, QLIN_MAX)) >> 16;
+
+    result = ilog2(value+2048); /* only positive values */
+    result = Q16_DIV(result << 16, 2048 << 16);
+    return result;
 }
 
 /* Apply window function to input
@@ -297,10 +292,10 @@ int32_t calc_magnitudes(bool logarithmic)
         tmp = fsqrt(tmp & 0x7FFFFFFF , 16);
 
         if (logarithmic)
+        {
             tmp = get_log_value(tmp, true);
-
-        if (logarithmic)
             plot[i] = tmp;
+        }
         else
             plot[i] = tmp >> 16;
 
@@ -321,7 +316,7 @@ const unsigned char* window_text[] = { "Hamming window", "Hann window" };
 #else
 #   define MODES_COUNT 2
 #endif
-#define REFRESH_RATE 20
+#define REFRESH_RATE 10
 
 struct {
     bool logarithmic;
@@ -552,13 +547,17 @@ void draw(char mode, const unsigned char* message)
         }
 #   endif
 
+#if LCD_DEPTH > 2
         rb->lcd_set_foreground(LCD_DARKGRAY);
         rb->lcd_fillrect(LCD_WIDTH-1-x, 0, LCD_WIDTH-1, y);
 
         rb->lcd_set_foreground(LCD_DEFAULT_FG);
         rb->lcd_set_background(LCD_DARKGRAY);
+#endif
         rb->lcd_putsxy(LCD_WIDTH-1-x+3, 2, last_message);
+#if LCD_DEPTH > 1
         rb->lcd_set_background(LCD_DEFAULT_BG);
+#endif
 
         show_message--;
 
@@ -568,7 +567,7 @@ void draw(char mode, const unsigned char* message)
             if(graph_settings.orientation_vertical)
             {
                 rb->lcd_set_drawmode(DRMODE_SOLID | DRMODE_INVERSEVID);
-                rb->lcd_fillrect(LCD_WIDTH-1-x, 0, LCD_WIDTH-1, y);
+                rb->lcd_fillrect(LCD_WIDTH-2-x, 0, LCD_WIDTH-1, y);
                 rb->lcd_set_drawmode(DRMODE_SOLID);
             }
             else
@@ -632,8 +631,7 @@ void draw_lines_vertical(void)
             int32_t color = Q16_DIV((line+1) << 16, LCD_HEIGHT << 16);
             color = Q16_MUL(color, (COLORS-1) << 16) >> 16;
             rb->lcd_set_foreground(colors[color]);
-            rb->lcd_drawline(0, LCD_HEIGHT-line-1,
-                             LCD_WIDTH-1, LCD_HEIGHT-line-1);
+            rb->lcd_hline(0, LCD_WIDTH-1, LCD_HEIGHT-line-1);
         }
         /* Erase the lines with the background color */
         rb->lcd_set_foreground(rb->lcd_get_background());
@@ -668,7 +666,6 @@ void draw_lines_vertical(void)
                 if (graph_settings.logarithmic)
                 {
                     bins_avg = Q16_DIV(bins_avg, div << 16);
-
                     y = Q16_MUL(vfactor, bins_avg) >> 16;
                 }
                 else
@@ -693,10 +690,10 @@ void draw_lines_vertical(void)
         {
 #       ifdef HAVE_LCD_COLOR
             if(graph_settings.colored)
-                rb->lcd_drawline(x, 0, x, LCD_HEIGHT-y);
+                rb->lcd_vline(x, 0, LCD_HEIGHT-y);
             else
 #       endif
-            rb->lcd_drawline(x, LCD_HEIGHT-1 , x, LCD_HEIGHT-y-1);
+            rb->lcd_vline(x, LCD_HEIGHT-1, LCD_HEIGHT-y-1);
         }
     }
 #   ifdef HAVE_LCD_COLOR
@@ -742,7 +739,7 @@ void draw_lines_horizontal(void)
             int32_t color = Q16_DIV((line+1) << 16, LCD_WIDTH << 16);
             color = Q16_MUL(color, (COLORS-1) << 16) >> 16;
             rb->lcd_set_foreground(colors[color]);
-            rb->lcd_drawline(line, 0, line, LCD_HEIGHT-1);
+            rb->lcd_vline(line, 0, LCD_HEIGHT-1);
         }
         /* Erase the lines with the background color */
         rb->lcd_set_foreground(rb->lcd_get_background());
@@ -802,11 +799,11 @@ void draw_lines_horizontal(void)
 #       ifdef HAVE_LCD_COLOR
             if(graph_settings.colored)
             {
-                rb->lcd_drawline(LCD_WIDTH-1, y, x, y);
+                rb->lcd_hline(LCD_WIDTH-1, x, y);
             }
             else
 #       endif
-            rb->lcd_drawline(0, y, x, y);
+            rb->lcd_hline(0, x, y);
         }
     }
 #   ifdef HAVE_LCD_COLOR
@@ -821,6 +818,7 @@ void draw_bars_vertical(void)
 
     calc_magnitudes(graph_settings.logarithmic);
 
+    rb->lcd_set_foreground(LCD_DEFAULT_FG);
     int64_t bars_values[bars], bars_max = 0, avg = 0;
     unsigned int i, bars_idx = 0;
     for (i = 0; i < ARRAYSIZE_PLOT; ++i)
@@ -884,6 +882,7 @@ void draw_bars_horizontal(void)
 
     calc_magnitudes(graph_settings.logarithmic);
 
+    rb->lcd_set_foreground(LCD_DEFAULT_FG);
     int64_t bars_values[bars], bars_max = 0, avg = 0;
     unsigned int i, bars_idx = 0;
     for (i = 0; i < ARRAYSIZE_PLOT; ++i)
@@ -940,8 +939,6 @@ void draw_bars_horizontal(void)
     }
 }
 
-#define QDB_MAX 454934
-#define LIN_MAX 1034
 #ifdef HAVE_LCD_COLOR
 void draw_spectrogram_vertical(void)
 {
@@ -981,7 +978,7 @@ void draw_spectrogram_vertical(void)
             if(graph_settings.logarithmic)
             {
                 avg = Q16_DIV(avg, count << 16);
-                color = Q16_DIV(avg, QDB_MAX);
+                color = Q16_DIV(avg, QLOG_MAX);
                 color = Q16_MUL(color, (COLORS-1) << 16) >> 16;
             }
             else
@@ -1042,7 +1039,7 @@ void draw_spectrogram_horizontal(void)
             if(graph_settings.logarithmic)
             {
                 avg = Q16_DIV(avg, count << 16);
-                color = Q16_DIV(avg, QDB_MAX);
+                color = Q16_DIV(avg, QLOG_MAX);
                 color = Q16_MUL(color, (COLORS-1) << 16) >> 16;
             }
             else
@@ -1077,8 +1074,14 @@ enum plugin_status plugin_start(const void* parameter)
         return PLUGIN_OK;
     }
 
+#if LCD_DEPTH > 1
     rb->lcd_set_backdrop(NULL);
+#endif
     backlight_force_on();
+
+#ifdef HAVE_ADJUSTABLE_CPU_FREQ
+    rb->cpu_boost(true);
+#endif
 
     /* Defaults */
     bool run = true;
@@ -1087,7 +1090,7 @@ enum plugin_status plugin_start(const void* parameter)
     graph_settings.orientation_vertical = true;
     graph_settings.window_func = 0;
 #ifdef HAVE_LCD_COLOR
-    graph_settings.colored = false; /* doesn't do anything yet*/
+    graph_settings.colored = false;
 #endif
     bool changed_window = false;
 

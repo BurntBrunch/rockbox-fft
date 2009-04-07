@@ -1,6 +1,7 @@
 #ifndef __MATH_H_
 #define __MATH_H_
 
+#include <inttypes.h>
 #include <math.h>
 #include "lib/fixedpoint.h"
 
@@ -16,4 +17,5 @@
 #define float_q15(a) float_q(a, 15)
 #define float_q16(a) float_q(a, 16)
 
+short ilog2(short i);
 #endif
