@@ -316,7 +316,11 @@ int32_t calc_magnitudes(bool logarithmic)
 const unsigned char* modes_text[] = { "Lines", "Bars", "Spectrogram" };
 const unsigned char* scales_text[] = { "Linear scale", "Logarithmic scale" };
 const unsigned char* window_text[] = { "Hamming window", "Hann window" };
-#define MODES_COUNT 3
+#ifdef HAVE_LCD_COLOR
+#   define MODES_COUNT 3
+#else
+#   define MODES_COUNT 2
+#endif
 #define REFRESH_RATE 20
 
 struct {
@@ -507,6 +511,7 @@ void draw(char mode, const unsigned char* message)
             spectrogram_settings.row = 0; spectrogram_settings.column = 0;
             break;
         }
+#   ifdef HAVE_LCD_COLOR
         case 2: {
             if(last_mode != 2 ||
                graph_settings.orientation_vertical != last_orientation)
@@ -522,6 +527,7 @@ void draw(char mode, const unsigned char* message)
             last_mode = 2;
             break;
         }
+#   endif
     }
 
     if (show_message > 0)
@@ -531,6 +537,7 @@ void draw(char mode, const unsigned char* message)
         x += 6; /* 3 px of horizontal padding and */
         y += 4; /* 2 px of vertical padding */
 
+#   ifdef HAVE_LCD_COLOR
         if(mode == 2)
         {
             if (graph_settings.orientation_vertical)
@@ -543,6 +550,7 @@ void draw(char mode, const unsigned char* message)
                 }
             }
         }
+#   endif
 
         rb->lcd_set_foreground(LCD_DARKGRAY);
         rb->lcd_fillrect(LCD_WIDTH-1-x, 0, LCD_WIDTH-1, y);
@@ -553,6 +561,8 @@ void draw(char mode, const unsigned char* message)
         rb->lcd_set_background(LCD_DEFAULT_BG);
 
         show_message--;
+
+#   ifdef HAVE_LCD_COLOR
         if(show_message == 0 && mode == 2)
         {
             if(graph_settings.orientation_vertical)
@@ -569,6 +579,7 @@ void draw(char mode, const unsigned char* message)
                     spectrogram_settings.row = 0;
             }
         }
+#   endif
     }
 
     last_orientation = graph_settings.orientation_vertical;
@@ -931,6 +942,7 @@ void draw_bars_horizontal(void)
 
 #define QDB_MAX 454934
 #define LIN_MAX 1034
+#ifdef HAVE_LCD_COLOR
 void draw_spectrogram_vertical(void)
 {
     const int32_t scale_factor =
@@ -940,10 +952,7 @@ void draw_spectrogram_vertical(void)
                       (ARRAYSIZE_PLOT-scale_factor*LCD_HEIGHT) << 15)
              + (1<<14) ) >> 15;
 
-    static int max = 0;
-    int nmax = calc_magnitudes(graph_settings.logarithmic);
-    if (nmax > max)
-        max = nmax, DEBUGF("New maximum: %i\n", max);
+    calc_magnitudes(graph_settings.logarithmic);
 
     int i, y = LCD_HEIGHT-1, count = 0, rem_count = 0;
     int64_t avg = 0;
@@ -1056,6 +1065,7 @@ void draw_spectrogram_horizontal(void)
     else
         xlcd_scroll_up(1);
 }
+#endif
 /********************* End of plotting functions (modes) *********************/
 
 enum plugin_status plugin_start(const void* parameter)
@@ -1183,13 +1193,13 @@ enum plugin_status plugin_start(const void* parameter)
                 draw(mode, 0);
                 break;
             }
-#           ifdef HAVE_LCD_COLOR
+#       ifdef HAVE_LCD_COLOR
             case FFT_COLOR: {
                 graph_settings.colored = !graph_settings.colored;
                 draw(mode, 0);
                 break;
             }
-#           endif
+#       endif
             default: {
                 if (rb->default_event_handler(button) == SYS_USB_CONNECTED)
                     return PLUGIN_USB_CONNECTED;
