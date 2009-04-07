@@ -244,7 +244,7 @@ void apply_window_func(char mode)
             for (i = 0; i < ARRAYSIZE_IN; ++i)
             {
                 int32_t cos;
-                (void) fsincos(Q_DIV(i << 16, (ARRAYSIZE_IN - 1) << 16, 16) << 16,
+                (void) fsincos(Q16_DIV(i << 16, (ARRAYSIZE_IN - 1) << 16) << 16,
                                &cos);
                 cos >>= 16;
 
@@ -262,7 +262,7 @@ void apply_window_func(char mode)
             for (i = 0; i < ARRAYSIZE_IN; ++i)
             {
                 int32_t factor;
-                (void) fsincos(Q_DIV(i << 16, (ARRAYSIZE_IN - 1) << 16, 16) << 16,
+                (void) fsincos(Q16_DIV(i << 16, (ARRAYSIZE_IN - 1) << 16) << 16,
                                &factor);
                 /* s16.15; cos( 2* pi * i/(ArraySize - 1))*/
                 factor >>= 16;
@@ -289,10 +289,10 @@ int32_t calc_magnitudes(bool logarithmic)
 
     for (i = 0; i < ARRAYSIZE_PLOT; ++i)
     {
-        tmp = Q_MUL( ((int32_t) output[i].r) << 16,
-                     ((int32_t) output[i].r) << 16, 16);
-        tmp += Q_MUL( ((int32_t) output[i].i) << 16,
-                      ((int32_t) output[i].i) << 16, 16);
+        tmp = Q16_MUL( ((int32_t) output[i].r) << 16,
+                     ((int32_t) output[i].r) << 16);
+        tmp += Q16_MUL( ((int32_t) output[i].i) << 16,
+                      ((int32_t) output[i].i) << 16);
 
         tmp = fsqrt(tmp & 0x7FFFFFFF , 16);
 
@@ -608,7 +608,7 @@ void draw_lines_vertical(void)
     int32_t vfactor;
 
     if (graph_settings.logarithmic)
-        vfactor = Q_DIV(LCD_HEIGHT << 16, max, 16); /* s15.16 */
+        vfactor = Q16_DIV(LCD_HEIGHT << 16, max); /* s15.16 */
     else
         vfactor = Q15_DIV(LCD_HEIGHT << 15, max << 15); /* s16.15 */
 
@@ -618,8 +618,8 @@ void draw_lines_vertical(void)
         int line;
         for(line = 0; line < LCD_HEIGHT; ++line)
         {
-            int32_t color = Q_DIV((line+1) << 16, LCD_HEIGHT << 16, 16);
-            color = Q_MUL(color, (COLORS-1) << 16, 16) >> 16;
+            int32_t color = Q16_DIV((line+1) << 16, LCD_HEIGHT << 16);
+            color = Q16_MUL(color, (COLORS-1) << 16) >> 16;
             rb->lcd_set_foreground(colors[color]);
             rb->lcd_drawline(0, LCD_HEIGHT-line-1,
                              LCD_WIDTH-1, LCD_HEIGHT-line-1);
@@ -656,9 +656,9 @@ void draw_lines_vertical(void)
             {
                 if (graph_settings.logarithmic)
                 {
-                    bins_avg = Q_DIV(bins_avg, div << 16, 16);
+                    bins_avg = Q16_DIV(bins_avg, div << 16);
 
-                    y = Q_MUL(vfactor, bins_avg, 16) >> 16;
+                    y = Q16_MUL(vfactor, bins_avg) >> 16;
                 }
                 else
                 {
@@ -718,7 +718,7 @@ void draw_lines_horizontal(void)
     int32_t hfactor;
 
     if (graph_settings.logarithmic)
-        hfactor = Q_DIV((LCD_WIDTH - 1) << 16, max, 16); /* s15.16 */
+        hfactor = Q16_DIV((LCD_WIDTH - 1) << 16, max); /* s15.16 */
     else
         hfactor = Q15_DIV((LCD_WIDTH - 1) << 15, max << 15); /* s16.15 */
 
@@ -728,8 +728,8 @@ void draw_lines_horizontal(void)
         int line;
         for(line = 0; line < LCD_WIDTH; ++line)
         {
-            int32_t color = Q_DIV((line+1) << 16, LCD_WIDTH << 16, 16);
-            color = Q_MUL(color, (COLORS-1) << 16, 16) >> 16;
+            int32_t color = Q16_DIV((line+1) << 16, LCD_WIDTH << 16);
+            color = Q16_MUL(color, (COLORS-1) << 16) >> 16;
             rb->lcd_set_foreground(colors[color]);
             rb->lcd_drawline(line, 0, line, LCD_HEIGHT-1);
         }
@@ -764,9 +764,9 @@ void draw_lines_horizontal(void)
             {
                 if (graph_settings.logarithmic)
                 {
-                    bins_avg = Q_DIV(bins_avg, div << 16, 16);
+                    bins_avg = Q16_DIV(bins_avg, div << 16);
 
-                    x = Q_MUL(hfactor, bins_avg, 16) >> 16;
+                    x = Q16_MUL(hfactor, bins_avg) >> 16;
                 }
                 else
                 {
@@ -820,7 +820,7 @@ void draw_bars_vertical(void)
             /* Calculate the average value and keep the fractional part
              * for some added precision */
             if (graph_settings.logarithmic)
-                avg = Q_DIV(avg, items << 16, 16); /* s15.16 */
+                avg = Q16_DIV(avg, items << 16); /* s15.16 */
             else
                 avg = Q15_DIV(avg << 15, items << 15); /* s16.15 */
             bars_values[bars_idx] = avg;
@@ -841,7 +841,7 @@ void draw_bars_vertical(void)
 
     int64_t vfactor;
     if (graph_settings.logarithmic)
-        vfactor = Q_DIV(LCD_HEIGHT << 16, bars_max, 16);
+        vfactor = Q16_DIV(LCD_HEIGHT << 16, bars_max);
     else
         vfactor = Q15_DIV(LCD_HEIGHT << 15, bars_max);
 
@@ -851,7 +851,7 @@ void draw_bars_vertical(void)
         int y;
         if (graph_settings.logarithmic)
         {
-            y = Q_MUL(vfactor, bars_values[i], 16);
+            y = Q16_MUL(vfactor, bars_values[i]);
             y += (1 << 15);
             y >>= 16;
         }
@@ -883,7 +883,7 @@ void draw_bars_horizontal(void)
             /* Calculate the average value and keep the fractional part
              * for some added precision */
             if (graph_settings.logarithmic)
-                avg = Q_DIV(avg, items << 16, 16); /* s15.16 */
+                avg = Q16_DIV(avg, items << 16); /* s15.16 */
             else
                 avg = Q15_DIV(avg << 15, items << 15); /* s16.15 */
             bars_values[bars_idx] = avg;
@@ -904,7 +904,7 @@ void draw_bars_horizontal(void)
 
     int64_t hfactor;
     if (graph_settings.logarithmic)
-        hfactor = Q_DIV(LCD_WIDTH << 16, bars_max, 16);
+        hfactor = Q16_DIV(LCD_WIDTH << 16, bars_max);
     else
         hfactor = Q15_DIV(LCD_WIDTH << 15, bars_max);
 
@@ -914,7 +914,7 @@ void draw_bars_horizontal(void)
         int x;
         if (graph_settings.logarithmic)
         {
-            x = Q_MUL(hfactor, bars_values[i], 16);
+            x = Q16_MUL(hfactor, bars_values[i]);
             x += (1 << 15);
             x >>= 16;
         }
@@ -971,9 +971,9 @@ void draw_spectrogram_vertical(void)
             int32_t color;
             if(graph_settings.logarithmic)
             {
-                avg = Q_DIV(avg, count << 16, 16);
-                color = Q_DIV(avg, QDB_MAX, 16);
-                color = Q_MUL(color, (COLORS-1) << 16, 16) >> 16;
+                avg = Q16_DIV(avg, count << 16);
+                color = Q16_DIV(avg, QDB_MAX);
+                color = Q16_MUL(color, (COLORS-1) << 16) >> 16;
             }
             else
             {
@@ -1032,9 +1032,9 @@ void draw_spectrogram_horizontal(void)
             int32_t color;
             if(graph_settings.logarithmic)
             {
-                avg = Q_DIV(avg, count << 16, 16);
-                color = Q_DIV(avg, QDB_MAX, 16);
-                color = Q_MUL(color, (COLORS-1) << 16, 16) >> 16;
+                avg = Q16_DIV(avg, count << 16);
+                color = Q16_DIV(avg, QDB_MAX);
+                color = Q16_MUL(color, (COLORS-1) << 16) >> 16;
             }
             else
             {
