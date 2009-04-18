@@ -312,12 +312,17 @@ struct {
     int window_func;
 #ifdef HAVE_LCD_COLOR
     bool colored;
+    struct {
+        int column;
+        int row;
+    } spectrogram;
 #endif
+    struct {
+        bool orientation;
+        bool mode;
+        bool scale;
+    } changed;
 } graph_settings;
-struct {
-    int column;
-    int row;
-} spectrogram_settings;
 
 #ifdef HAVE_LCD_COLOR
 #define COLORS 256
@@ -459,12 +464,28 @@ void draw_spectrogram_horizontal(void);
 void draw(char mode, const unsigned char* message)
 {
     static uint32_t show_message = 0, last_mode = 0;
-    static bool last_orientation = true;
+    static bool last_orientation = true, last_scale = true;
     static unsigned char* last_message = 0;
     if (message != 0)
     {
         last_message = (unsigned char*) message;
         show_message = 5;
+    }
+
+    if(last_mode != mode)
+    {
+        last_mode = mode;
+        graph_settings.changed.mode = true;
+    }
+    if(last_scale != graph_settings.logarithmic)
+    {
+        last_scale = graph_settings.logarithmic;
+        graph_settings.changed.scale = true;
+    }
+    if(last_orientation != graph_settings.orientation_vertical)
+    {
+        last_orientation = graph_settings.orientation_vertical;
+        graph_settings.changed.orientation = true;
     }
 
     switch (mode)
@@ -477,9 +498,6 @@ void draw(char mode, const unsigned char* message)
                 draw_lines_vertical();
             else
                 draw_lines_horizontal();
-
-            last_mode = 0;
-            spectrogram_settings.row = 0; spectrogram_settings.column = 0;
             break;
         }
         case 1: {
@@ -490,24 +508,14 @@ void draw(char mode, const unsigned char* message)
             else
                 draw_bars_horizontal();
 
-            last_mode = 1;
-            spectrogram_settings.row = 0; spectrogram_settings.column = 0;
             break;
         }
 #   ifdef HAVE_LCD_COLOR
         case 2: {
-            if(last_mode != 2 ||
-               graph_settings.orientation_vertical != last_orientation)
-            {
-                spectrogram_settings.row = 0; spectrogram_settings.column = 0;
-                rb->lcd_clear_display();
-            }
             if(graph_settings.orientation_vertical)
                 draw_spectrogram_vertical();
             else
                 draw_spectrogram_horizontal();
-
-            last_mode = 2;
             break;
         }
 #   endif
@@ -525,11 +533,11 @@ void draw(char mode, const unsigned char* message)
         {
             if (graph_settings.orientation_vertical)
             {
-                if(spectrogram_settings.column > LCD_WIDTH-x-2)
+                if(graph_settings.spectrogram.column > LCD_WIDTH-x-2)
                 {
-                    xlcd_scroll_left(spectrogram_settings.column -
+                    xlcd_scroll_left(graph_settings.spectrogram.column -
                                      (LCD_WIDTH - x - 1));
-                    spectrogram_settings.column = LCD_WIDTH - x - 2;
+                    graph_settings.spectrogram.column = LCD_WIDTH - x - 2;
                 }
             }
         }
@@ -543,7 +551,7 @@ void draw(char mode, const unsigned char* message)
         rb->lcd_set_background(LCD_DARKGRAY);
 #endif
         rb->lcd_putsxy(LCD_WIDTH-1-x+3, 2, last_message);
-#if LCD_DEPTH > 1
+#if LCD_DEPTH > 2
         rb->lcd_set_background(LCD_DEFAULT_BG);
 #endif
 
@@ -561,17 +569,18 @@ void draw(char mode, const unsigned char* message)
             else
             {
                 xlcd_scroll_up(y);
-                spectrogram_settings.row -= y;
-                if(spectrogram_settings.row < 0)
-                    spectrogram_settings.row = 0;
+                graph_settings.spectrogram.row -= y;
+                if(graph_settings.spectrogram.row < 0)
+                    graph_settings.spectrogram.row = 0;
             }
         }
 #   endif
     }
-
-    last_orientation = graph_settings.orientation_vertical;
-
     rb->lcd_update();
+
+    graph_settings.changed.mode =  false;
+    graph_settings.changed.orientation = false;
+    graph_settings.changed.scale = false;
 
     /* we still have time in our time slot, so we sleep() */
     if (*rb->current_tick < next_update)
@@ -584,17 +593,13 @@ void draw(char mode, const unsigned char* message)
 void draw_lines_vertical(void)
 {
     static int max = 0;
-    static bool last_mode = false;
-
     static const int32_t hfactor =
             Q16_DIV(LCD_WIDTH << 16, (ARRAYSIZE_PLOT) << 16),
             bins_per_pixel = (ARRAYSIZE_PLOT) / LCD_WIDTH;
 
-    if (graph_settings.logarithmic != last_mode)
-    {
+    if (graph_settings.changed.scale)
         max = 0; /* reset the graph on scaling mode change */
-        last_mode = graph_settings.logarithmic;
-    }
+
     int32_t new_max = calc_magnitudes(graph_settings.logarithmic);
 
     if (new_max > max)
@@ -679,17 +684,14 @@ void draw_lines_vertical(void)
 void draw_lines_horizontal(void)
 {
     static int max = 0;
-    static bool last_mode = false;
 
     static const int32_t vfactor =
             Q16_DIV(LCD_HEIGHT << 16, (ARRAYSIZE_PLOT) << 16),
             bins_per_pixel = (ARRAYSIZE_PLOT) / LCD_HEIGHT;
 
-    if (graph_settings.logarithmic != last_mode)
-    {
+    if (graph_settings.changed.scale)
         max = 0; /* reset the graph on scaling mode change */
-        last_mode = graph_settings.logarithmic;
-    }
+
     int32_t new_max = calc_magnitudes(graph_settings.logarithmic);
 
     if (new_max > max)
@@ -877,6 +879,11 @@ void draw_spectrogram_vertical(void)
              + (1<<15) ) >> 16;
 
     calc_magnitudes(graph_settings.logarithmic);
+    if(graph_settings.changed.mode || graph_settings.changed.orientation)
+    {
+        graph_settings.spectrogram.column = 0;
+        rb->lcd_clear_display();
+    }
 
     int i, y = LCD_HEIGHT-1, count = 0, rem_count = 0;
     int64_t avg = 0;
@@ -908,7 +915,7 @@ void draw_spectrogram_vertical(void)
             color = Q16_MUL(color, (COLORS-1) << 16) >> 16;
 
             rb->lcd_set_foreground(colors[color]);
-            rb->lcd_drawpixel(spectrogram_settings.column, y);
+            rb->lcd_drawpixel(graph_settings.spectrogram.column, y);
 
             y--;
 
@@ -916,8 +923,8 @@ void draw_spectrogram_vertical(void)
             count = 0;
         }
     }
-    if(spectrogram_settings.column != LCD_WIDTH - 1)
-        spectrogram_settings.column++;
+    if(graph_settings.spectrogram.column != LCD_WIDTH - 1)
+        graph_settings.spectrogram.column++;
     else
         xlcd_scroll_left(1);
 }
@@ -931,6 +938,11 @@ void draw_spectrogram_horizontal(void)
              + (1<<15) ) >> 16;
 
     calc_magnitudes(graph_settings.logarithmic);
+    if(graph_settings.changed.mode || graph_settings.changed.orientation)
+    {
+        graph_settings.spectrogram.row = 0;
+        rb->lcd_clear_display();
+    }
 
     int i, x = 0, count = 0, rem_count = 0;
     int64_t avg = 0;
@@ -961,7 +973,7 @@ void draw_spectrogram_horizontal(void)
             color = Q16_DIV(avg, graph_settings.logarithmic ? QLOG_MAX : QLIN_MAX);
             color = Q16_MUL(color, (COLORS-1) << 16) >> 16;
             rb->lcd_set_foreground(colors[color]);
-            rb->lcd_drawpixel(x, spectrogram_settings.row);
+            rb->lcd_drawpixel(x, graph_settings.spectrogram.row);
 
             x++;
 
@@ -969,8 +981,8 @@ void draw_spectrogram_horizontal(void)
             count = 0;
         }
     }
-    if(spectrogram_settings.row != LCD_HEIGHT-1)
-        spectrogram_settings.row++;
+    if(graph_settings.spectrogram.row != LCD_HEIGHT-1)
+        graph_settings.spectrogram.row++;
     else
         xlcd_scroll_up(1);
 }
@@ -1001,8 +1013,13 @@ enum plugin_status plugin_start(const void* parameter)
     graph_settings.logarithmic = true;
     graph_settings.orientation_vertical = true;
     graph_settings.window_func = 0;
+    graph_settings.changed.mode = false;
+    graph_settings.changed.scale = false;
+    graph_settings.changed.orientation = false;
 #ifdef HAVE_LCD_COLOR
     graph_settings.colored = false;
+    graph_settings.spectrogram.row = 0;
+    graph_settings.spectrogram.column = 0;
 #endif
     bool changed_window = false;
 
