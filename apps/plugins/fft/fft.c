@@ -202,15 +202,8 @@ static char buffer[BUFSIZE];
 /* Returns logarithmically scaled values in S15.16 format */
 int32_t get_log_value(int32_t value)
 {
-    const int32_t magic = Q16_DIV(30720 << 16, QLIN_MAX);
-
-    value = (Q16_MUL(value, magic) + (1 << 15)) >> 16;
-
-    int32_t result = ilog2(value+2048); /* only positive values */
-
-    /* result = Q16_DIV(result << 16, 2048 << 16); */
-    result <<= 5;
-    return Q16_MUL(result, ONE_LOG2_TEN);
+    int32_t result = flog(value);
+    return result;
 }
 
 /* Apply window function to input
@@ -274,13 +267,11 @@ int32_t calc_magnitudes(bool logarithmic)
 
     for (i = 0; i < ARRAYSIZE_PLOT; ++i)
     {
-        tmp = Q16_MUL( ((int32_t) output[i].r) << 16,
-                     ((int32_t) output[i].r) << 16);
-        tmp += Q16_MUL( ((int32_t) output[i].i) << 16,
-                      ((int32_t) output[i].i) << 16);
-
+        tmp = output[i].r * output[i].r + output[i].i * output[i].i;
+        tmp <<=10; // tmp / 64 in Q16
 
         tmp = fsqrt(tmp & 0x7FFFFFFF , 16);
+        tmp = Q16_MUL(tmp, 1 << 19);
 
         if (logarithmic)
             tmp = get_log_value(tmp);

@@ -17,5 +17,4 @@
 #define float_q15(a) float_q(a, 15)
 #define float_q16(a) float_q(a, 16)
 
-short ilog2(short i);
 #endif
