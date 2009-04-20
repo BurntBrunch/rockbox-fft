@@ -174,11 +174,14 @@ PLUGIN_HEADER
 #error No keymap defined!
 #endif
 
-#define FFT_SIZE (1024)
+#include "pluginbitmaps/fft_gradient_horizontal.h"
+#include "pluginbitmaps/fft_gradient_vertical.h"
+#include "pluginbitmaps/fft_colors.h"
 
 #include "kiss_fft.h"
 #include "_kiss_fft_guts.h" /* sizeof(struct kiss_fft_state) */
 
+#define FFT_SIZE (1024)
 #define ARRAYSIZE_IN FFT_SIZE
 #define ARRAYSIZE_OUT FFT_SIZE
 #define ARRAYSIZE_PLOT FFT_SIZE/2
@@ -187,23 +190,57 @@ PLUGIN_HEADER
 #define FFT_FFT   kiss_fft
 #define FFT_CFG   kiss_fft_cfg
 
+/****************************** Globals ****************************/
+
 static kiss_fft_cpx input[ARRAYSIZE_IN];
 static kiss_fft_cpx output[ARRAYSIZE_OUT];
 static int32_t plot[ARRAYSIZE_PLOT];
 static char buffer[BUFSIZE];
 
+const unsigned char* modes_text[] = { "Lines", "Bars", "Spectrogram" };
+const unsigned char* scales_text[] = { "Linear scale", "Logarithmic scale" };
+const unsigned char* window_text[] = { "Hamming window", "Hann window" };
+
+#ifdef HAVE_LCD_COLOR
+#   define MODES_COUNT 3
+#else
+#   define MODES_COUNT 2
+#endif
+#define REFRESH_RATE 7
+
+struct {
+    bool logarithmic;
+    bool orientation_vertical;
+    int window_func;
+#ifdef HAVE_LCD_COLOR
+    bool colored;
+    struct {
+        int column;
+        int row;
+    } spectrogram;
+#endif
+    struct {
+        bool orientation;
+        bool mode;
+        bool scale;
+    } changed;
+} graph_settings;
+
+#define COLORS BMPWIDTH_fft_colors
+
+static long next_update = 0;
+/************************* End of globals *************************/
+
 /************************* Math functions *************************/
-/* #define QLOG_MAX (4 << 16) */
-#define QLOG_MAX 0x13480
-#define LIN_MAX 1034
+#define QLOG_MAX 197573
 #define QLIN_MAX 67795525
-/* 1/log2(10) */
-#define ONE_LOG2_TEN 0x4D00
+#define QLN_10 float_q16(2.302585093)
+#define LIN_MAX (QLIN_MAX >> 16)
+
 /* Returns logarithmically scaled values in S15.16 format */
-int32_t get_log_value(int32_t value)
+inline int32_t get_log_value(int32_t value)
 {
-    int32_t result = flog(value);
-    return result;
+    return Q16_DIV(flog(value), QLN_10);
 }
 
 /* Apply window function to input
@@ -263,15 +300,24 @@ int32_t calc_magnitudes(bool logarithmic)
     int64_t tmp;
     size_t i;
 
-    int32_t max = -2147483647;
+    static int32_t max_ = 0;
+    if(graph_settings.changed.scale)
+        max_ = 0;
 
+    int32_t max = -2147483647;
+    const int32_t scale_bits = 0;
+
+    /* Calculate the magnitude, discarding the phase.
+     * The sum of the squares can easily overflow the 15-bit (s15.16)
+     * requirement for fsqrt, so we scale the data down */
     for (i = 0; i < ARRAYSIZE_PLOT; ++i)
     {
         tmp = output[i].r * output[i].r + output[i].i * output[i].i;
-        tmp <<=10; // tmp / 64 in Q16
+        tmp <<=(16 - scale_bits);
 
         tmp = fsqrt(tmp & 0x7FFFFFFF , 16);
-        tmp = Q16_MUL(tmp, 1 << 19);
+        if (scale_bits > 0)
+            tmp = Q16_MUL(tmp, 1 << (16 + scale_bits/2));
 
         if (logarithmic)
             tmp = get_log_value(tmp);
@@ -281,170 +327,13 @@ int32_t calc_magnitudes(bool logarithmic)
         if (plot[i] > max)
             max = plot[i];
     }
+   if(max > max_)
+        max_ = max, DEBUGF("%s: %s max: %i\n", __func__, logarithmic ? "log" : "lin", max_);
     return max;
 }
 /************************ End of math functions ***********************/
 
 /********************* Plotting functions (modes) *********************/
-
-const unsigned char* modes_text[] = { "Lines", "Bars", "Spectrogram" };
-const unsigned char* scales_text[] = { "Linear scale", "Logarithmic scale" };
-const unsigned char* window_text[] = { "Hamming window", "Hann window" };
-#ifdef HAVE_LCD_COLOR
-#   define MODES_COUNT 3
-#else
-#   define MODES_COUNT 2
-#endif
-#define REFRESH_RATE 10
-
-struct {
-    bool logarithmic;
-    bool orientation_vertical;
-    int window_func;
-#ifdef HAVE_LCD_COLOR
-    bool colored;
-    struct {
-        int column;
-        int row;
-    } spectrogram;
-#endif
-    struct {
-        bool orientation;
-        bool mode;
-        bool scale;
-    } changed;
-} graph_settings;
-
-#ifdef HAVE_LCD_COLOR
-#define COLORS 256
-static unsigned int colors[COLORS] = { LCD_RGBPACK(0, 0, 23), LCD_RGBPACK(0, 0, 26),
-        LCD_RGBPACK(0, 0, 28), LCD_RGBPACK(0, 0, 31), LCD_RGBPACK(0, 0, 33),
-        LCD_RGBPACK(0, 0, 36), LCD_RGBPACK(0, 0, 38), LCD_RGBPACK(0, 0, 41),
-        LCD_RGBPACK(0, 0, 43), LCD_RGBPACK(0, 0, 46), LCD_RGBPACK(0, 0, 48),
-        LCD_RGBPACK(0, 0, 50), LCD_RGBPACK(0, 0, 53), LCD_RGBPACK(0, 0, 55),
-        LCD_RGBPACK(0, 0, 58), LCD_RGBPACK(0, 0, 59), LCD_RGBPACK(0, 0, 62),
-        LCD_RGBPACK(0, 0, 64), LCD_RGBPACK(0, 0, 66), LCD_RGBPACK(0, 0, 69),
-        LCD_RGBPACK(0, 0, 71), LCD_RGBPACK(0, 0, 73), LCD_RGBPACK(0, 0, 75),
-        LCD_RGBPACK(0, 0, 77), LCD_RGBPACK(0, 0, 79), LCD_RGBPACK(1, 0, 81),
-        LCD_RGBPACK(4, 0, 83), LCD_RGBPACK(7, 0, 85), LCD_RGBPACK(9, 0, 87),
-        LCD_RGBPACK(9, 0, 87), LCD_RGBPACK(12, 0, 89), LCD_RGBPACK(15, 0, 91),
-        LCD_RGBPACK(16, 0, 92), LCD_RGBPACK(19, 0, 94), LCD_RGBPACK(22, 0, 96),
-        LCD_RGBPACK(24, 0, 97), LCD_RGBPACK(27, 0, 99),
-        LCD_RGBPACK(30, 0, 101), LCD_RGBPACK(32, 0, 102),
-        LCD_RGBPACK(35, 0, 104), LCD_RGBPACK(38, 0, 105),
-        LCD_RGBPACK(40, 0, 107), LCD_RGBPACK(43, 0, 108),
-        LCD_RGBPACK(45, 0, 109), LCD_RGBPACK(47, 0, 111),
-        LCD_RGBPACK(50, 0, 112), LCD_RGBPACK(53, 0, 113),
-        LCD_RGBPACK(55, 0, 114), LCD_RGBPACK(58, 0, 115),
-        LCD_RGBPACK(60, 0, 116), LCD_RGBPACK(63, 0, 118),
-        LCD_RGBPACK(65, 0, 119), LCD_RGBPACK(68, 0, 120),
-        LCD_RGBPACK(70, 0, 120), LCD_RGBPACK(72, 0, 121),
-        LCD_RGBPACK(75, 0, 122), LCD_RGBPACK(78, 0, 123),
-        LCD_RGBPACK(80, 0, 123), LCD_RGBPACK(83, 0, 124),
-        LCD_RGBPACK(85, 0, 125), LCD_RGBPACK(88, 0, 125),
-        LCD_RGBPACK(90, 0, 126), LCD_RGBPACK(93, 0, 125),
-        LCD_RGBPACK(95, 0, 126), LCD_RGBPACK(97, 0, 126),
-        LCD_RGBPACK(99, 0, 127), LCD_RGBPACK(101, 0, 127),
-        LCD_RGBPACK(101, 0, 127), LCD_RGBPACK(104, 0, 127),
-        LCD_RGBPACK(106, 0, 126), LCD_RGBPACK(109, 0, 127),
-        LCD_RGBPACK(111, 0, 127), LCD_RGBPACK(114, 0, 126),
-        LCD_RGBPACK(116, 0, 127), LCD_RGBPACK(118, 0, 127),
-        LCD_RGBPACK(120, 0, 127), LCD_RGBPACK(123, 0, 126),
-        LCD_RGBPACK(125, 0, 125), LCD_RGBPACK(127, 0, 126),
-        LCD_RGBPACK(130, 0, 125), LCD_RGBPACK(131, 0, 124),
-        LCD_RGBPACK(134, 0, 124), LCD_RGBPACK(136, 0, 123),
-        LCD_RGBPACK(138, 0, 122), LCD_RGBPACK(140, 0, 122),
-        LCD_RGBPACK(142, 0, 121), LCD_RGBPACK(144, 0, 120),
-        LCD_RGBPACK(147, 0, 119), LCD_RGBPACK(149, 0, 119),
-        LCD_RGBPACK(151, 0, 118), LCD_RGBPACK(153, 0, 117),
-        LCD_RGBPACK(155, 0, 115), LCD_RGBPACK(157, 0, 114),
-        LCD_RGBPACK(159, 0, 113), LCD_RGBPACK(162, 0, 112),
-        LCD_RGBPACK(164, 0, 111), LCD_RGBPACK(165, 0, 110),
-        LCD_RGBPACK(167, 0, 109), LCD_RGBPACK(169, 0, 108),
-        LCD_RGBPACK(171, 0, 106), LCD_RGBPACK(173, 0, 105),
-        LCD_RGBPACK(175, 0, 103), LCD_RGBPACK(176, 0, 102),
-        LCD_RGBPACK(178, 0, 100), LCD_RGBPACK(178, 0, 100),
-        LCD_RGBPACK(180, 0, 98), LCD_RGBPACK(182, 0, 97),
-        LCD_RGBPACK(184, 0, 95), LCD_RGBPACK(186, 0, 93),
-        LCD_RGBPACK(188, 0, 91), LCD_RGBPACK(189, 0, 89),
-        LCD_RGBPACK(190, 0, 87), LCD_RGBPACK(192, 0, 86),
-        LCD_RGBPACK(194, 0, 84), LCD_RGBPACK(196, 0, 82),
-        LCD_RGBPACK(197, 0, 80), LCD_RGBPACK(199, 0, 78),
-        LCD_RGBPACK(201, 0, 76), LCD_RGBPACK(202, 0, 74),
-        LCD_RGBPACK(204, 0, 72), LCD_RGBPACK(206, 0, 70),
-        LCD_RGBPACK(207, 0, 67), LCD_RGBPACK(209, 0, 65),
-        LCD_RGBPACK(210, 0, 63), LCD_RGBPACK(212, 0, 60),
-        LCD_RGBPACK(213, 0, 58), LCD_RGBPACK(215, 0, 56),
-        LCD_RGBPACK(216, 0, 53), LCD_RGBPACK(216, 0, 52),
-        LCD_RGBPACK(218, 0, 49), LCD_RGBPACK(219, 0, 47),
-        LCD_RGBPACK(221, 0, 44), LCD_RGBPACK(222, 0, 42),
-        LCD_RGBPACK(223, 0, 39), LCD_RGBPACK(224, 0, 37),
-        LCD_RGBPACK(226, 0, 34), LCD_RGBPACK(227, 0, 32),
-        LCD_RGBPACK(228, 0, 29), LCD_RGBPACK(229, 0, 27),
-        LCD_RGBPACK(230, 0, 25), LCD_RGBPACK(231, 0, 22),
-        LCD_RGBPACK(232, 0, 19), LCD_RGBPACK(232, 0, 19),
-        LCD_RGBPACK(233, 0, 17), LCD_RGBPACK(235, 0, 14),
-        LCD_RGBPACK(236, 0, 12), LCD_RGBPACK(237, 0, 9),
-        LCD_RGBPACK(238, 0, 6), LCD_RGBPACK(239, 0, 4), LCD_RGBPACK(239, 0, 1),
-        LCD_RGBPACK(240, 1, 0), LCD_RGBPACK(241, 6, 0),
-        LCD_RGBPACK(242, 11, 0), LCD_RGBPACK(243, 16, 0),
-        LCD_RGBPACK(244, 21, 0), LCD_RGBPACK(244, 26, 0),
-        LCD_RGBPACK(245, 31, 0), LCD_RGBPACK(246, 36, 0),
-        LCD_RGBPACK(247, 41, 0), LCD_RGBPACK(247, 46, 0),
-        LCD_RGBPACK(247, 50, 0), LCD_RGBPACK(248, 55, 0),
-        LCD_RGBPACK(248, 60, 0), LCD_RGBPACK(249, 65, 0),
-        LCD_RGBPACK(249, 70, 0), LCD_RGBPACK(250, 75, 0),
-        LCD_RGBPACK(250, 79, 0), LCD_RGBPACK(251, 84, 0),
-        LCD_RGBPACK(252, 89, 0), LCD_RGBPACK(251, 94, 0),
-        LCD_RGBPACK(252, 99, 0), LCD_RGBPACK(253, 103, 0),
-        LCD_RGBPACK(252, 108, 0),
-        LCD_RGBPACK(253, 112, 0), LCD_RGBPACK(254, 117, 0),
-        LCD_RGBPACK(254, 121, 0), LCD_RGBPACK(253, 125, 0),
-        LCD_RGBPACK(254, 130, 0), LCD_RGBPACK(255, 134, 0),
-        LCD_RGBPACK(255, 137, 0), LCD_RGBPACK(255, 138, 0),
-        LCD_RGBPACK(255, 142, 0), LCD_RGBPACK(255, 147, 0),
-        LCD_RGBPACK(255, 151, 0), LCD_RGBPACK(255, 154, 0),
-        LCD_RGBPACK(255, 158, 0), LCD_RGBPACK(255, 162, 0),
-        LCD_RGBPACK(255, 166, 0), LCD_RGBPACK(255, 170, 0),
-        LCD_RGBPACK(255, 174, 0), LCD_RGBPACK(255, 178, 0),
-        LCD_RGBPACK(255, 181, 0), LCD_RGBPACK(255, 184, 0),
-        LCD_RGBPACK(255, 187, 0), LCD_RGBPACK(255, 191, 0),
-        LCD_RGBPACK(255, 194, 0), LCD_RGBPACK(255, 197, 0),
-        LCD_RGBPACK(255, 201, 0), LCD_RGBPACK(255, 204, 3),
-        LCD_RGBPACK(255, 207, 8), LCD_RGBPACK(255, 210, 12),
-        LCD_RGBPACK(255, 213, 17), LCD_RGBPACK(255, 215, 21),
-        LCD_RGBPACK(255, 217, 26), LCD_RGBPACK(255, 220,30),
-        LCD_RGBPACK(255, 223, 34), LCD_RGBPACK(255, 225, 39),
-        LCD_RGBPACK(255, 228, 44),
-        LCD_RGBPACK(255, 229, 48), LCD_RGBPACK(255, 231, 53),
-        LCD_RGBPACK(255, 233, 57),
-        LCD_RGBPACK(255, 235, 61), LCD_RGBPACK(255, 237, 66),
-        LCD_RGBPACK(255, 239, 71),
-        LCD_RGBPACK(255, 241, 75), LCD_RGBPACK(255, 243, 80),
-        LCD_RGBPACK(255, 244, 84),
-        LCD_RGBPACK(255, 246, 88), LCD_RGBPACK(255, 246, 88),
-        LCD_RGBPACK(255, 247, 93),
-        LCD_RGBPACK(255, 248, 97), LCD_RGBPACK(255, 249, 102),
-        LCD_RGBPACK(255, 250, 107), LCD_RGBPACK(255, 251, 111),
-        LCD_RGBPACK(255, 251, 115), LCD_RGBPACK(255, 252, 120),
-        LCD_RGBPACK(255, 252, 124), LCD_RGBPACK(255, 253, 129),
-        LCD_RGBPACK(255, 253, 133), LCD_RGBPACK(255, 254, 138),
-        LCD_RGBPACK(255, 255, 143), LCD_RGBPACK(255, 255, 147),
-        LCD_RGBPACK(255, 255, 151), LCD_RGBPACK(255, 255, 156),
-        LCD_RGBPACK(255, 255, 160), LCD_RGBPACK(255, 255, 165),
-        LCD_RGBPACK(255, 255, 170), LCD_RGBPACK(255, 255, 174),
-        LCD_RGBPACK(255, 255, 178), LCD_RGBPACK(255, 255, 183),
-        LCD_RGBPACK(255, 255, 187), LCD_RGBPACK(255, 255, 192),
-        LCD_RGBPACK(255, 255, 196), LCD_RGBPACK(255, 255, 200),
-        LCD_RGBPACK(255, 255, 205), LCD_RGBPACK(255, 255, 210),
-        LCD_RGBPACK(255, 255, 214), LCD_RGBPACK(255, 255, 219),
-        LCD_RGBPACK(255, 255, 223), LCD_RGBPACK(255, 255, 227),
-        LCD_RGBPACK(255, 255, 232), LCD_RGBPACK(255, 255, 236),
-        LCD_RGBPACK(255, 255, 241), LCD_RGBPACK(255, 255, 246),
-        LCD_RGBPACK(255, 255, 250), LCD_RGBPACK(255, 255, 255) };
-#endif
-static long next_update = 0;
-
 void draw_lines_vertical(void);
 void draw_lines_horizontal(void);
 void draw_bars_vertical(void);
@@ -454,9 +343,12 @@ void draw_spectrogram_horizontal(void);
 
 void draw(char mode, const unsigned char* message)
 {
-    static uint32_t show_message = 0, last_mode = 0;
-    static bool last_orientation = true, last_scale = true;
+    static uint32_t show_message = 0;
     static unsigned char* last_message = 0;
+
+    static char last_mode = 0;
+    static bool last_orientation = true, last_scale = true;
+
     if (message != 0)
     {
         last_message = (unsigned char*) message;
@@ -583,37 +475,32 @@ void draw(char mode, const unsigned char* message)
 
 void draw_lines_vertical(void)
 {
-    static int max = 0;
+    static int32_t max = 0, vfactor = 0, vfactor_count = 0;
     static const int32_t hfactor =
             Q16_DIV(LCD_WIDTH << 16, (ARRAYSIZE_PLOT) << 16),
             bins_per_pixel = (ARRAYSIZE_PLOT) / LCD_WIDTH;
+    static bool old_scale = true;
 
-    if (graph_settings.changed.scale)
-        max = 0; /* reset the graph on scaling mode change */
+    if (old_scale != graph_settings.logarithmic)
+        old_scale = graph_settings.logarithmic, max = 0; /* reset the graph on scaling mode change */
 
     int32_t new_max = calc_magnitudes(graph_settings.logarithmic);
 
     if (new_max > max)
+    {
         max = new_max;
+        vfactor = Q16_DIV(LCD_HEIGHT << 16, max); /* s15.16 */
+        vfactor_count = Q16_DIV(vfactor, bins_per_pixel << 16); /* s15.16 */
+    }
 
     if (new_max == 0 || max == 0) /* nothing to draw */
         return;
 
-    int32_t vfactor;
-
-    vfactor = Q16_DIV(LCD_HEIGHT << 16, max); /* s15.16 */
-
 #ifdef HAVE_LCD_COLOR
     if(graph_settings.colored)
     {
-        const int32_t colors__height = Q16_DIV((COLORS-1)<<16, LCD_HEIGHT<<16);
-        int line;
-        for(line = 0; line < LCD_HEIGHT; ++line)
-        {
-            int32_t color = Q16_MUL((line+1) << 16, colors__height) >> 16;
-            rb->lcd_set_foreground(colors[color]);
-            rb->lcd_hline(0, LCD_WIDTH-1, LCD_HEIGHT-line-1);
-        }
+        rb->lcd_bitmap(fft_gradient_vertical, 0, 0,
+                       BMPWIDTH_fft_gradient_vertical, BMPHEIGHT_fft_gradient_vertical);
         /* Erase the lines with the background color */
         rb->lcd_set_foreground(rb->lcd_get_background());
     }
@@ -628,9 +515,8 @@ void draw_lines_vertical(void)
     {
         int32_t x = 0, y = 0;
 
-        x = Q16_MUL(hfactor, i << 16);
-        x += (1 << 15);
-        x >>= 16;
+        x = Q16_MUL(hfactor, i << 16) >> 16;
+        //x = (x + (1 << 15)) >> 16;
 
         if (hfactor < 65536) /* hfactor < 0, graph compression */
         {
@@ -644,8 +530,7 @@ void draw_lines_vertical(void)
             const int32_t div = bins_per_pixel > 0 ? bins_per_pixel : 1;
             if ((i + 1) % div == 0)
             {
-                bins_avg = Q16_DIV(bins_avg, div << 16);
-                y = Q16_MUL(vfactor, bins_avg) >> 16;
+                y = Q16_MUL(vfactor_count, bins_avg) >> 16;
 
                 bins_avg = 0;
                 draw = true;
@@ -698,14 +583,8 @@ void draw_lines_horizontal(void)
 #ifdef HAVE_LCD_COLOR
     if(graph_settings.colored)
     {
-        const int32_t colors__width = Q16_DIV((COLORS-1)<<16, LCD_WIDTH<<16);
-        int line;
-        for(line = 0; line < LCD_WIDTH; ++line)
-        {
-            int32_t color = Q16_MUL((line+1) << 16, colors__width) >> 16;
-            rb->lcd_set_foreground(colors[color]);
-            rb->lcd_vline(line, 0, LCD_HEIGHT-1);
-        }
+        rb->lcd_bitmap(fft_gradient_horizontal, 0, 0,
+                       BMPWIDTH_fft_gradient_horizontal, BMPHEIGHT_fft_gradient_horizontal);
         /* Erase the lines with the background color */
         rb->lcd_set_foreground(rb->lcd_get_background());
     }
@@ -877,10 +756,13 @@ void draw_spectrogram_vertical(void)
     }
 
     int i, y = LCD_HEIGHT-1, count = 0, rem_count = 0;
-    int64_t avg = 0;
+    uint64_t avg = 0;
     for(i = 0; i < ARRAYSIZE_PLOT; ++i)
     {
-        avg += plot[i];
+        if(plot[i] < 0)
+            avg += 1 << 16;
+        else
+            avg += plot[i];
         ++count;
         ++rem_count;
 
@@ -890,7 +772,10 @@ void draw_spectrogram_vertical(void)
                 (i+1) < ARRAYSIZE_PLOT)
         {
             ++i;
-            avg += plot[i];
+            if(plot[i] < 0)
+                avg += 1 << 16;
+            else
+                avg += plot[i];
             rem_count = 0;
         }
 
@@ -905,7 +790,12 @@ void draw_spectrogram_vertical(void)
             color = Q16_DIV(avg, graph_settings.logarithmic ? QLOG_MAX : QLIN_MAX);
             color = Q16_MUL(color, (COLORS-1) << 16) >> 16;
 
-            rb->lcd_set_foreground(colors[color]);
+            if(color >= COLORS) /* TODO: investigate why we get these cases */
+                color = COLORS-1;
+            else if (color < 0)
+                color = 0;
+
+            rb->lcd_set_foreground(fft_colors[color]);
             rb->lcd_drawpixel(graph_settings.spectrogram.column, y);
 
             y--;
@@ -963,7 +853,7 @@ void draw_spectrogram_horizontal(void)
             avg = Q16_DIV(avg, count << 16);
             color = Q16_DIV(avg, graph_settings.logarithmic ? QLOG_MAX : QLIN_MAX);
             color = Q16_MUL(color, (COLORS-1) << 16) >> 16;
-            rb->lcd_set_foreground(colors[color]);
+            rb->lcd_set_foreground(fft_colors[color]);
             rb->lcd_drawpixel(x, graph_settings.spectrogram.row);
 
             x++;
@@ -1014,10 +904,6 @@ enum plugin_status plugin_start(const void* parameter)
 #endif
     bool changed_window = false;
 
-    /* set the end of the first time slot - rest of the
-     * next_update work is done in draw() */
-    next_update = *rb->current_tick + HZ / REFRESH_RATE;
-
     size_t size = sizeof(buffer);
     kiss_fft_cfg state = kiss_fft_alloc(FFT_SIZE, 0, buffer, &size);
 
@@ -1027,10 +913,14 @@ enum plugin_status plugin_start(const void* parameter)
         return PLUGIN_ERROR;
     }
 
-    /* taken out of the main loop for efficiency (?)*/
+
     kiss_fft_scalar left, right;
     kiss_fft_scalar* value;
     int count;
+
+    /* set the end of the first time slot - rest of the
+     * next_update work is done in draw() */
+    next_update = *rb->current_tick + HZ / REFRESH_RATE;
 
     while (run)
     {
@@ -1068,6 +958,7 @@ enum plugin_status plugin_start(const void* parameter)
              * only tries to maintain the frame rate */
             rb->yield();
             kiss_fft(state, input, output);
+            rb->yield();
             if(changed_window)
             {
                 draw(mode, window_text[graph_settings.window_func]);
@@ -1075,7 +966,6 @@ enum plugin_status plugin_start(const void* parameter)
             }
             else
                 draw(mode, 0);
-
             fft_idx = 0;
         };
 

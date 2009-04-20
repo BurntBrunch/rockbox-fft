@@ -252,6 +252,16 @@ clock_logo.112x64x1.bmp
 clock_messages.112x64x1.bmp
 #endif
 
+/* FFT */
+
+#ifdef HAVE_LCD_COLOR
+#if LCD_WIDTH == 320 && LCD_HEIGHT == 240
+fft_gradient_vertical.320x240x16.bmp
+fft_gradient_horizontal.320x240x16.bmp
+fft_colors.320x240x16.bmp
+#endif
+#endif
+
 /* Flipit */
 #ifdef HAVE_LCD_COLOR
 #if LCD_WIDTH >= 480
