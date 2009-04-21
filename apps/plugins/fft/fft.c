@@ -206,7 +206,7 @@ const unsigned char* window_text[] = { "Hamming window", "Hann window" };
 #else
 #   define MODES_COUNT 2
 #endif
-#define REFRESH_RATE 7
+#define REFRESH_RATE 6
 
 struct {
     bool logarithmic;
@@ -232,8 +232,8 @@ static long next_update = 0;
 /************************* End of globals *************************/
 
 /************************* Math functions *************************/
-#define QLOG_MAX 197573
-#define QLIN_MAX 67795525
+#define QLOG_MAX 286286
+#define QLIN_MAX 1534588906
 #define QLN_10 float_q16(2.302585093)
 #define LIN_MAX (QLIN_MAX >> 16)
 
@@ -300,12 +300,12 @@ int32_t calc_magnitudes(bool logarithmic)
     int64_t tmp;
     size_t i;
 
-    static int32_t max_ = 0;
-    if(graph_settings.changed.scale)
-        max_ = 0;
+  //  static int32_t max_ = 0;
+  //  if(graph_settings.changed.scale)
+  //      max_ = 0;
 
     int32_t max = -2147483647;
-    const int32_t scale_bits = 0;
+    //const int32_t scale_bits = 0;
 
     /* Calculate the magnitude, discarding the phase.
      * The sum of the squares can easily overflow the 15-bit (s15.16)
@@ -313,22 +313,22 @@ int32_t calc_magnitudes(bool logarithmic)
     for (i = 0; i < ARRAYSIZE_PLOT; ++i)
     {
         tmp = output[i].r * output[i].r + output[i].i * output[i].i;
-        tmp <<=(16 - scale_bits);
+        tmp <<= 16;//tmp <<=(16 - scale_bits);
 
-        tmp = fsqrt(tmp & 0x7FFFFFFF , 16);
-        if (scale_bits > 0)
-            tmp = Q16_MUL(tmp, 1 << (16 + scale_bits/2));
+        tmp = fsqrt64(tmp, 16);
+        //if (scale_bits > 0)
+        //    tmp = Q16_MUL(tmp, 1 << (16 + scale_bits/2));
 
         if (logarithmic)
-            tmp = get_log_value(tmp);
+            tmp = get_log_value(tmp & 0x7FFFFFFF);
 
         plot[i] = tmp;
 
         if (plot[i] > max)
             max = plot[i];
     }
-   if(max > max_)
-        max_ = max, DEBUGF("%s: %s max: %i\n", __func__, logarithmic ? "log" : "lin", max_);
+   //if(max > max_)
+  //      max_ = max, DEBUGF("%s: %s max: %i\n", __func__, logarithmic ? "log" : "lin", max_);
     return max;
 }
 /************************ End of math functions ***********************/
@@ -746,7 +746,9 @@ void draw_spectrogram_vertical(void)
         remaining_div =
             ( Q16_DIV((scale_factor*LCD_HEIGHT) << 16,
                       (ARRAYSIZE_PLOT-scale_factor*LCD_HEIGHT) << 16)
-             + (1<<15) ) >> 16;
+             + (1<<15) ) >> 16,
+        colors_per_val_log = Q16_DIV((COLORS-1) << 16, QLOG_MAX),
+        colors_per_val_lin = Q16_DIV((COLORS-1) << 16, QLIN_MAX);
 
     calc_magnitudes(graph_settings.logarithmic);
     if(graph_settings.changed.mode || graph_settings.changed.orientation)
@@ -787,8 +789,10 @@ void draw_spectrogram_vertical(void)
             int32_t color;
 
             avg = Q16_DIV(avg, count << 16);
-            color = Q16_DIV(avg, graph_settings.logarithmic ? QLOG_MAX : QLIN_MAX);
-            color = Q16_MUL(color, (COLORS-1) << 16) >> 16;
+            if(graph_settings.logarithmic)
+                color = Q16_MUL(avg, colors_per_val_log) >> 16;
+            else
+                color = Q16_MUL(avg, colors_per_val_lin) >> 16;
 
             if(color >= COLORS) /* TODO: investigate why we get these cases */
                 color = COLORS-1;
@@ -803,6 +807,8 @@ void draw_spectrogram_vertical(void)
             avg = 0;
             count = 0;
         }
+        if(y < 0)
+            break;
     }
     if(graph_settings.spectrogram.column != LCD_WIDTH - 1)
         graph_settings.spectrogram.column++;
@@ -816,7 +822,9 @@ void draw_spectrogram_horizontal(void)
         remaining_div =
             ( Q16_DIV((scale_factor*LCD_WIDTH) << 16,
                       (ARRAYSIZE_PLOT-scale_factor*LCD_WIDTH) << 16)
-             + (1<<15) ) >> 16;
+             + (1<<15) ) >> 16,
+         colors_per_val_log = Q16_DIV((COLORS-1) << 16, QLOG_MAX),
+         colors_per_val_lin = Q16_DIV((COLORS-1) << 16, QLIN_MAX);
 
     calc_magnitudes(graph_settings.logarithmic);
     if(graph_settings.changed.mode || graph_settings.changed.orientation)
@@ -836,7 +844,7 @@ void draw_spectrogram_horizontal(void)
         /* Kinda hacky - due to the rounding in scale_factor, we try to
          * uniformly interweave the extra values in our calculations */
         if(remaining_div > 0 && rem_count == remaining_div &&
-                (i+1) < ARRAYSIZE_PLOT)
+                i < (ARRAYSIZE_PLOT-1))
         {
             ++i;
             avg += plot[i];
@@ -851,8 +859,11 @@ void draw_spectrogram_horizontal(void)
             int32_t color;
 
             avg = Q16_DIV(avg, count << 16);
-            color = Q16_DIV(avg, graph_settings.logarithmic ? QLOG_MAX : QLIN_MAX);
-            color = Q16_MUL(color, (COLORS-1) << 16) >> 16;
+            if(graph_settings.logarithmic)
+                color = Q16_MUL(avg, colors_per_val_log) >> 16;
+            else
+                color = Q16_MUL(avg, colors_per_val_lin) >> 16;
+
             rb->lcd_set_foreground(fft_colors[color]);
             rb->lcd_drawpixel(x, graph_settings.spectrogram.row);
 
@@ -861,6 +872,8 @@ void draw_spectrogram_horizontal(void)
             avg = 0;
             count = 0;
         }
+        if(x >= LCD_WIDTH)
+            break;
     }
     if(graph_settings.spectrogram.row != LCD_HEIGHT-1)
         graph_settings.spectrogram.row++;
@@ -928,47 +941,47 @@ enum plugin_status plugin_start(const void* parameter)
         if (value == 0 || count == 0)
         {
             rb->yield();
-            continue;
         }
-
-        int idx = 0; /* offset in the buffer */
-        int fft_idx = 0; /* offset in input */
-
-        do
+        else
         {
-            left = *(value + idx);
-            idx += 2;
+            int idx = 0; /* offset in the buffer */
+            int fft_idx = 0; /* offset in input */
 
-            right = *(value + idx);
-            idx += 2;
+            do
+            {
+                left = *(value + idx);
+                idx += 2;
 
-            input[fft_idx].r = left;
-            input[fft_idx].i = right;
-            fft_idx++;
+                right = *(value + idx);
+                idx += 2;
+
+                input[fft_idx].r = left;
+                input[fft_idx].i = right;
+                fft_idx++;
+
+                if (fft_idx == ARRAYSIZE_IN)
+                    break;
+            } while (idx < count);
 
             if (fft_idx == ARRAYSIZE_IN)
-                break;
-        } while (idx < count);
-
-        if (fft_idx == ARRAYSIZE_IN)
-        {
-            apply_window_func(graph_settings.window_func);
-
-            /* Play nice - the sleep at the end of draw()
-             * only tries to maintain the frame rate */
-            rb->yield();
-            kiss_fft(state, input, output);
-            rb->yield();
-            if(changed_window)
             {
-                draw(mode, window_text[graph_settings.window_func]);
-                changed_window = false;
-            }
-            else
-                draw(mode, 0);
-            fft_idx = 0;
-        };
+                apply_window_func(graph_settings.window_func);
 
+                /* Play nice - the sleep at the end of draw()
+                 * only tries to maintain the frame rate */
+                rb->yield();
+                kiss_fft(state, input, output);
+                rb->yield();
+                if(changed_window)
+                {
+                    draw(mode, window_text[graph_settings.window_func]);
+                    changed_window = false;
+                }
+                else
+                    draw(mode, 0);
+                fft_idx = 0;
+            };
+        }
         int button = rb->button_get(false);
         switch (button)
         {
