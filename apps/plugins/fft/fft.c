@@ -206,7 +206,7 @@ const unsigned char* window_text[] = { "Hamming window", "Hann window" };
 #else
 #   define MODES_COUNT 2
 #endif
-#define REFRESH_RATE 6
+#define REFRESH_RATE 8
 
 struct {
     bool logarithmic;
@@ -646,7 +646,7 @@ void draw_lines_horizontal(void)
 
 void draw_bars_vertical(void)
 {
-    static const unsigned int bars = 12, border = 3, items = ARRAYSIZE_PLOT
+    static const unsigned int bars = 14, border = 3, items = ARRAYSIZE_PLOT
             / bars, width = (LCD_WIDTH - ((bars - 1) * border)) / bars;
 
     calc_magnitudes(graph_settings.logarithmic);
@@ -693,7 +693,7 @@ void draw_bars_vertical(void)
 
 void draw_bars_horizontal(void)
 {
-    static const unsigned int bars = 12, border = 3, items = ARRAYSIZE_PLOT
+    static const unsigned int bars = 14, border = 3, items = ARRAYSIZE_PLOT
             / bars, height = (LCD_HEIGHT - ((bars - 1) * border)) / bars;
 
     calc_magnitudes(graph_settings.logarithmic);
