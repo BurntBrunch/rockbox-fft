@@ -201,6 +201,7 @@ const unsigned char* modes_text[] = { "Lines", "Bars", "Spectrogram" };
 const unsigned char* scales_text[] = { "Linear scale", "Logarithmic scale" };
 const unsigned char* window_text[] = { "Hamming window", "Hann window" };
 
+const unsigned int32_t refresh_rates[] = { 6, 10, 8 };
 #ifdef HAVE_LCD_COLOR
 #   define MODES_COUNT 3
 #else
@@ -209,6 +210,7 @@ const unsigned char* window_text[] = { "Hamming window", "Hann window" };
 #define REFRESH_RATE 8
 
 struct {
+    int32_t mode;
     bool logarithmic;
     bool orientation_vertical;
     int window_func;
@@ -341,7 +343,7 @@ void draw_bars_horizontal(void);
 void draw_spectrogram_vertical(void);
 void draw_spectrogram_horizontal(void);
 
-void draw(char mode, const unsigned char* message)
+void draw(const unsigned char* message)
 {
     static uint32_t show_message = 0;
     static unsigned char* last_message = 0;
@@ -355,9 +357,9 @@ void draw(char mode, const unsigned char* message)
         show_message = 5;
     }
 
-    if(last_mode != mode)
+    if(last_mode != graph_settings.mode)
     {
-        last_mode = mode;
+        last_mode = graph_settings.mode;
         graph_settings.changed.mode = true;
     }
     if(last_scale != graph_settings.logarithmic)
@@ -371,7 +373,7 @@ void draw(char mode, const unsigned char* message)
         graph_settings.changed.orientation = true;
     }
 
-    switch (mode)
+    switch (graph_settings.mode)
     {
         default:
         case 0: {
@@ -412,7 +414,7 @@ void draw(char mode, const unsigned char* message)
         y += 4; /* 2 px of vertical padding */
 
 #   ifdef HAVE_LCD_COLOR
-        if(mode == 2)
+        if(graph_settings.mode == 2)
         {
             if (graph_settings.orientation_vertical)
             {
@@ -441,7 +443,7 @@ void draw(char mode, const unsigned char* message)
         show_message--;
 
 #   ifdef HAVE_LCD_COLOR
-        if(show_message == 0 && mode == 2)
+        if(show_message == 0 && graph_settings.mode == 2)
         {
             if(graph_settings.orientation_vertical)
             {
@@ -470,7 +472,7 @@ void draw(char mode, const unsigned char* message)
         rb->sleep(next_update - *rb->current_tick);
 
     /* end of next time slot */
-    next_update = *rb->current_tick + HZ / REFRESH_RATE;
+    next_update = *rb->current_tick + HZ / refresh_rates[graph_settings.mode];
 }
 
 void draw_lines_vertical(void)
@@ -903,7 +905,7 @@ enum plugin_status plugin_start(const void* parameter)
 
     /* Defaults */
     bool run = true;
-    int mode = 0;
+    graph_settings.mode = 0;
     graph_settings.logarithmic = true;
     graph_settings.orientation_vertical = true;
     graph_settings.window_func = 0;
@@ -974,11 +976,11 @@ enum plugin_status plugin_start(const void* parameter)
                 rb->yield();
                 if(changed_window)
                 {
-                    draw(mode, window_text[graph_settings.window_func]);
+                    draw(window_text[graph_settings.window_func]);
                     changed_window = false;
                 }
                 else
-                    draw(mode, 0);
+                    draw(0);
                 fft_idx = 0;
             };
         }
@@ -989,17 +991,17 @@ enum plugin_status plugin_start(const void* parameter)
                 run = false;
                 break;
             case FFT_PREV_GRAPH: {
-                mode -= 1;
-                if (mode < 0)
-                    mode = MODES_COUNT-1;
-                draw(mode, modes_text[(int) mode]);
+                graph_settings.mode--;
+                if (graph_settings.mode < 0)
+                    graph_settings.mode = MODES_COUNT-1;
+                draw(modes_text[graph_settings.mode]);
                 break;
             }
             case FFT_NEXT_GRAPH: {
-                mode += 1;
-                if (mode >= MODES_COUNT)
-                    mode = 0;
-                draw(mode, modes_text[(int) mode]);
+                graph_settings.mode++;
+                if (graph_settings.mode >= MODES_COUNT)
+                    graph_settings.mode = 0;
+                draw(modes_text[graph_settings.mode]);
                 break;
             }
             case FFT_WINDOW: {
@@ -1011,18 +1013,18 @@ enum plugin_status plugin_start(const void* parameter)
             }
             case FFT_SCALE: {
                 graph_settings.logarithmic = !graph_settings.logarithmic;
-                draw(mode, scales_text[graph_settings.logarithmic ? 1 : 0]);
+                draw(scales_text[graph_settings.logarithmic ? 1 : 0]);
                 break;
             }
             case FFT_ORIENTATION: {
                 graph_settings.orientation_vertical = !graph_settings.orientation_vertical;
-                draw(mode, 0);
+                draw(0);
                 break;
             }
 #       ifdef HAVE_LCD_COLOR
             case FFT_COLOR: {
                 graph_settings.colored = !graph_settings.colored;
-                draw(mode, 0);
+                draw(0);
                 break;
             }
 #       endif
