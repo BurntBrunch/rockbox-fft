@@ -200,14 +200,13 @@ static char buffer[BUFSIZE];
 const unsigned char* modes_text[] = { "Lines", "Bars", "Spectrogram" };
 const unsigned char* scales_text[] = { "Linear scale", "Logarithmic scale" };
 const unsigned char* window_text[] = { "Hamming window", "Hann window" };
-
 const unsigned int32_t refresh_rates[] = { 6, 10, 8 };
+
 #ifdef HAVE_LCD_COLOR
 #   define MODES_COUNT 3
 #else
 #   define MODES_COUNT 2
 #endif
-#define REFRESH_RATE 8
 
 struct {
     int32_t mode;
@@ -935,7 +934,7 @@ enum plugin_status plugin_start(const void* parameter)
 
     /* set the end of the first time slot - rest of the
      * next_update work is done in draw() */
-    next_update = *rb->current_tick + HZ / REFRESH_RATE;
+    next_update = *rb->current_tick + HZ / refresh_rates[graph_settings.mode];
 
     while (run)
     {
