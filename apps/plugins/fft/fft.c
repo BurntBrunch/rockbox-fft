@@ -742,8 +742,7 @@ void draw_bars_horizontal(void)
 #ifdef HAVE_LCD_COLOR
 void draw_spectrogram_vertical(void)
 {
-    const int32_t scale_factor =
-            ( Q16_DIV(ARRAYSIZE_PLOT << 16, LCD_HEIGHT << 16) + (1<<15) ) >> 16,
+    const int32_t scale_factor = ARRAYSIZE_PLOT / LCD_HEIGHT,
         remaining_div =
             ( Q16_DIV((scale_factor*LCD_HEIGHT) << 16,
                       (ARRAYSIZE_PLOT-scale_factor*LCD_HEIGHT) << 16)
@@ -760,32 +759,30 @@ void draw_spectrogram_vertical(void)
 
     int i, y = LCD_HEIGHT-1, count = 0, rem_count = 0;
     uint64_t avg = 0;
+    bool added_extra_value = false;
     for(i = 0; i < ARRAYSIZE_PLOT; ++i)
     {
-        if(plot[i] < 0)
-            avg += 1 << 16;
-        else
+        if(plot[i] > 0)
             avg += plot[i];
         ++count;
         ++rem_count;
 
         /* Kinda hacky - due to the rounding in scale_factor, we try to
          * uniformly interweave the extra values in our calculations */
-        if(remaining_div > 0 && rem_count == remaining_div &&
-                (i+1) < ARRAYSIZE_PLOT)
+        if(remaining_div > 0 && rem_count >= remaining_div &&
+                i < (ARRAYSIZE_PLOT-1))
         {
             ++i;
-            if(plot[i] < 0)
-                avg += 1 << 16;
-            else
+            if(plot[i] > 0)
                 avg += plot[i];
             rem_count = 0;
+            added_extra_value = true;
         }
 
         if(count >= scale_factor)
         {
-            if(rem_count == 0) /* if we just added an extra value */
-                ++count;
+            if(added_extra_value)
+                { ++count; added_extra_value = false; }
 
             int32_t color;
 
@@ -811,15 +808,14 @@ void draw_spectrogram_vertical(void)
         if(y < 0)
             break;
     }
-    if(graph_settings.spectrogram.column != LCD_WIDTH - 1)
+    if(graph_settings.spectrogram.column != LCD_WIDTH-1)
         graph_settings.spectrogram.column++;
     else
         xlcd_scroll_left(1);
 }
 void draw_spectrogram_horizontal(void)
 {
-    const int32_t scale_factor =
-            ( Q16_DIV(ARRAYSIZE_PLOT << 16, LCD_WIDTH << 16)) >> 16,
+    const int32_t scale_factor = ARRAYSIZE_PLOT / LCD_WIDTH,
         remaining_div =
             ( Q16_DIV((scale_factor*LCD_WIDTH) << 16,
                       (ARRAYSIZE_PLOT-scale_factor*LCD_WIDTH) << 16)
@@ -835,27 +831,31 @@ void draw_spectrogram_horizontal(void)
     }
 
     int i, x = 0, count = 0, rem_count = 0;
-    int64_t avg = 0;
+    uint64_t avg = 0;
+    bool added_extra_value = false;
     for(i = 0; i < ARRAYSIZE_PLOT; ++i)
     {
-        avg += plot[i];
+        if(plot[i] > 0)
+            avg += plot[i];
         ++count;
         ++rem_count;
 
         /* Kinda hacky - due to the rounding in scale_factor, we try to
          * uniformly interweave the extra values in our calculations */
-        if(remaining_div > 0 && rem_count == remaining_div &&
+        if(remaining_div > 0 && rem_count >= remaining_div &&
                 i < (ARRAYSIZE_PLOT-1))
         {
             ++i;
-            avg += plot[i];
+            if(plot[i] > 0)
+                avg += plot[i];
             rem_count = 0;
+            added_extra_value = true;
         }
 
         if(count >= scale_factor)
         {
-            if(rem_count == 0) /* if we just added an extra value */
-                ++count;
+            if(added_extra_value)
+                { ++count; added_extra_value = false; }
 
             int32_t color;
 
@@ -864,6 +864,11 @@ void draw_spectrogram_horizontal(void)
                 color = Q16_MUL(avg, colors_per_val_log) >> 16;
             else
                 color = Q16_MUL(avg, colors_per_val_lin) >> 16;
+
+            if(color >= COLORS) /* TODO: investigate why we get these cases */
+                color = COLORS-1;
+            else if (color < 0)
+                color = 0;
 
             rb->lcd_set_foreground(fft_colors[color]);
             rb->lcd_drawpixel(x, graph_settings.spectrogram.row);
