@@ -255,10 +255,20 @@ clock_messages.112x64x1.bmp
 /* FFT */
 
 #ifdef HAVE_LCD_COLOR
-#if LCD_WIDTH == 320 && LCD_HEIGHT == 240
+#if LCD_WIDTH >= 320 && LCD_HEIGHT >= 240
 fft_gradient_vertical.320x240x16.bmp
 fft_gradient_horizontal.320x240x16.bmp
 fft_colors.320x240x16.bmp
+#endif
+#elif LCD_DEPTH > 1  /* grayscale */
+#if LCD_WIDTH >= 320 && LCD_HEIGHT >= 240
+fft_gradient_vertical.320x240x2.bmp
+fft_gradient_horizontal.320x240x2.bmp
+fft_colors.320x240x2.bmp
+#elif LCD_WIDTH >= 160 && LCD_HEIGHT >= 128
+fft_gradient_vertical.160x128x2.bmp
+fft_gradient_horizontal.160x128x2.bmp
+fft_colors.320x240x2.bmp
 #endif
 #endif
 

@@ -24,7 +24,15 @@
 #include "lib/xlcd.h"
 #include "math.h"
 
+#ifndef HAVE_LCD_COLOR
+#include "lib/grey.h"
+#endif
+
 PLUGIN_HEADER
+
+#ifndef HAVE_LCD_COLOR
+GREY_INFO_STRUCT
+#endif
 
 #if CONFIG_KEYPAD == ARCHOS_AV300_PAD
 #   define FFT_PREV_GRAPH     BUTTON_LEFT
@@ -197,29 +205,27 @@ static kiss_fft_cpx output[ARRAYSIZE_OUT];
 static int32_t plot[ARRAYSIZE_PLOT];
 static char buffer[BUFSIZE];
 
+#if LCD_DEPTH > 1 /* greyscale or color, enable spectrogram */
+#define MODES_COUNT 3
+#else
+#define MODES_COUNT 2
+#endif
+
 const unsigned char* modes_text[] = { "Lines", "Bars", "Spectrogram" };
 const unsigned char* scales_text[] = { "Linear scale", "Logarithmic scale" };
 const unsigned char* window_text[] = { "Hamming window", "Hann window" };
 const unsigned int32_t refresh_rates[] = { 6, 10, 8 };
-
-#ifdef HAVE_LCD_COLOR
-#   define MODES_COUNT 3
-#else
-#   define MODES_COUNT 2
-#endif
 
 struct {
     int32_t mode;
     bool logarithmic;
     bool orientation_vertical;
     int window_func;
-#ifdef HAVE_LCD_COLOR
     bool colored;
     struct {
         int column;
         int row;
     } spectrogram;
-#endif
     struct {
         bool orientation;
         bool mode;
@@ -376,7 +382,11 @@ void draw(const unsigned char* message)
     {
         default:
         case 0: {
+#ifdef HAVE_LCD_COLOR
             rb->lcd_clear_display();
+#else
+            grey_clear_display();
+#endif
 
             if (graph_settings.orientation_vertical)
                 draw_lines_vertical();
@@ -385,7 +395,11 @@ void draw(const unsigned char* message)
             break;
         }
         case 1: {
+#ifdef HAVE_LCD_COLOR
             rb->lcd_clear_display();
+#else
+            grey_clear_display();
+#endif
 
             if(graph_settings.orientation_vertical)
                 draw_bars_vertical();
@@ -394,7 +408,6 @@ void draw(const unsigned char* message)
 
             break;
         }
-#   ifdef HAVE_LCD_COLOR
         case 2: {
             if(graph_settings.orientation_vertical)
                 draw_spectrogram_vertical();
@@ -402,65 +415,100 @@ void draw(const unsigned char* message)
                 draw_spectrogram_horizontal();
             break;
         }
-#   endif
     }
 
     if (show_message > 0)
     {
         int x, y;
+#ifdef HAVE_LCD_COLOR
         rb->lcd_getstringsize(last_message, &x, &y);
+#else
+        grey_getstringsize(last_message, &x, &y);
+#endif
         x += 6; /* 3 px of horizontal padding and */
         y += 4; /* 2 px of vertical padding */
 
-#   ifdef HAVE_LCD_COLOR
+        /* In vertical spectrogram mode, leave space for the popup */
         if(graph_settings.mode == 2)
         {
-            if (graph_settings.orientation_vertical)
+            if(graph_settings.orientation_vertical &&
+               graph_settings.spectrogram.column > LCD_WIDTH-x-2)
             {
-                if(graph_settings.spectrogram.column > LCD_WIDTH-x-2)
-                {
-                    xlcd_scroll_left(graph_settings.spectrogram.column -
-                                     (LCD_WIDTH - x - 1));
-                    graph_settings.spectrogram.column = LCD_WIDTH - x - 2;
-                }
+#ifdef HAVE_LCD_COLOR
+                xlcd_scroll_left(graph_settings.spectrogram.column -
+                                 (LCD_WIDTH - x - 1));
+#else
+                grey_scroll_left(graph_settings.spectrogram.column -
+                                 (LCD_WIDTH - x - 1));
+#endif
+                graph_settings.spectrogram.column = LCD_WIDTH - x - 2;
             }
         }
-#   endif
 
-#if LCD_DEPTH > 2
+#ifdef HAVE_LCD_COLOR
         rb->lcd_set_foreground(LCD_DARKGRAY);
         rb->lcd_fillrect(LCD_WIDTH-1-x, 0, LCD_WIDTH-1, y);
 
         rb->lcd_set_foreground(LCD_DEFAULT_FG);
         rb->lcd_set_background(LCD_DARKGRAY);
-#endif
         rb->lcd_putsxy(LCD_WIDTH-1-x+3, 2, last_message);
-#if LCD_DEPTH > 2
         rb->lcd_set_background(LCD_DEFAULT_BG);
+#else
+        grey_set_foreground(GREY_LIGHTGRAY);
+        grey_fillrect(LCD_WIDTH-1-x, 0, LCD_WIDTH-1, y);
+
+        grey_set_foreground(LCD_DEFAULT_FG);
+        grey_set_background(GREY_LIGHTGRAY);
+        grey_putsxy(LCD_WIDTH-1-x+3, 2, last_message);
+        grey_set_background(LCD_DEFAULT_BG);
 #endif
 
         show_message--;
-
-#   ifdef HAVE_LCD_COLOR
-        if(show_message == 0 && graph_settings.mode == 2)
-        {
-            if(graph_settings.orientation_vertical)
-            {
-                rb->lcd_set_drawmode(DRMODE_SOLID | DRMODE_INVERSEVID);
-                rb->lcd_fillrect(LCD_WIDTH-2-x, 0, LCD_WIDTH-1, y);
-                rb->lcd_set_drawmode(DRMODE_SOLID);
-            }
-            else
-            {
-                xlcd_scroll_up(y);
-                graph_settings.spectrogram.row -= y;
-                if(graph_settings.spectrogram.row < 0)
-                    graph_settings.spectrogram.row = 0;
-            }
-        }
-#   endif
     }
+    else if(last_message != 0)
+    {
+        /* The popup shouldn't be shown anymore but we haven't deleted it yet*/
+        int x, y;
+#ifdef HAVE_LCD_COLOR
+        rb->lcd_getstringsize(last_message, &x, &y);
+#else
+        grey_getstringsize(last_message, &x, &y);
+#endif
+        x += 6; /* 3 px of horizontal padding and */
+        y += 4; /* 2 px of vertical padding */
+
+        if(graph_settings.mode == 2 && !graph_settings.orientation_vertical)
+        {
+            /* In horizontal spectrogram mode, just scroll up by Y lines */
+#ifdef HAVE_LCD_COLOR
+            xlcd_scroll_up(y);
+#else
+            grey_scroll_up(y);
+#endif
+            graph_settings.spectrogram.row -= y;
+            if(graph_settings.spectrogram.row < 0)
+                graph_settings.spectrogram.row = 0;
+        }
+        else
+        {
+            /* In all other cases, just erase the popup */
+#ifdef HAVE_LCD_COLOR
+            rb->lcd_set_foreground(LCD_DEFAULT_BG);
+            rb->lcd_fillrect(LCD_WIDTH-2-x, 0, LCD_WIDTH-1, y);
+            rb->lcd_set_foreground(LCD_DEFAULT_FG);
+#else
+            grey_set_foreground(LCD_DEFAULT_BG);
+            grey_fillrect(LCD_WIDTH-2-x, 0, LCD_WIDTH-1, y);
+            grey_set_foreground(LCD_DEFAULT_FG);
+#endif
+        }
+        last_message = 0;
+    }
+#ifdef HAVE_LCD_COLOR
     rb->lcd_update();
+#else
+    grey_update();
+#endif
 
     graph_settings.changed.mode =  false;
     graph_settings.changed.orientation = false;
@@ -497,15 +545,19 @@ void draw_lines_vertical(void)
     if (new_max == 0 || max == 0) /* nothing to draw */
         return;
 
-#ifdef HAVE_LCD_COLOR
+
     if(graph_settings.colored)
     {
+#ifdef HAVE_LCD_COLOR
         rb->lcd_bitmap(fft_gradient_vertical, 0, 0,
                        BMPWIDTH_fft_gradient_vertical, BMPHEIGHT_fft_gradient_vertical);
         /* Erase the lines with the background color */
-        rb->lcd_set_foreground(rb->lcd_get_background());
-    }
+        rb->lcd_set_foreground(LCD_DEFAULT_BG);
+#else
+        grey_gray_bitmap(fft_gradient_vertical, 0, 0, BMPWIDTH_fft_gradient_vertical, BMPHEIGHT_fft_gradient_vertical);
+        grey_set_foreground(LCD_DEFAULT_BG);
 #endif
+    }
 
     /* take the average of neighboring bins
      * if we have to scale the graph horizontally */
@@ -545,17 +597,24 @@ void draw_lines_vertical(void)
 
         if (draw)
         {
-#       ifdef HAVE_LCD_COLOR
+#ifdef HAVE_LCD_COLOR
             if(graph_settings.colored)
                 rb->lcd_vline(x, 0, LCD_HEIGHT-y-1);
             else
-#       endif
-            rb->lcd_vline(x, LCD_HEIGHT-1, LCD_HEIGHT-y-1);
+                rb->lcd_vline(x, LCD_HEIGHT-1, LCD_HEIGHT-y-1);
+#else
+            if(graph_settings.colored)
+                grey_vline(x, 0, LCD_HEIGHT-y-1);
+            else
+                grey_vline(x, LCD_HEIGHT-1, LCD_HEIGHT-y-1);
+#endif
         }
     }
-#   ifdef HAVE_LCD_COLOR
+#ifdef HAVE_LCD_COLOR
     rb->lcd_set_foreground(LCD_DEFAULT_FG);
-#   endif
+#else
+    grey_set_foreground(LCD_DEFAULT_FG);
+#endif
 }
 
 void draw_lines_horizontal(void)
@@ -581,15 +640,18 @@ void draw_lines_horizontal(void)
 
     hfactor = Q16_DIV((LCD_WIDTH - 1) << 16, max); /* s15.16 */
 
-#ifdef HAVE_LCD_COLOR
     if(graph_settings.colored)
     {
+#ifdef HAVE_LCD_COLOR
         rb->lcd_bitmap(fft_gradient_horizontal, 0, 0,
                        BMPWIDTH_fft_gradient_horizontal, BMPHEIGHT_fft_gradient_horizontal);
         /* Erase the lines with the background color */
-        rb->lcd_set_foreground(rb->lcd_get_background());
-    }
+        rb->lcd_set_foreground(LCD_DEFAULT_BG);
+#else
+        grey_gray_bitmap(fft_gradient_horizontal, 0, 0, BMPWIDTH_fft_gradient_horizontal, BMPHEIGHT_fft_gradient_horizontal);
+        grey_set_foreground(LCD_DEFAULT_BG);
 #endif
+    }
 
     /* take the average of neighboring bins
      * if we have to scale the graph horizontally */
@@ -630,19 +692,24 @@ void draw_lines_horizontal(void)
 
         if (draw)
         {
-#       ifdef HAVE_LCD_COLOR
+#ifdef HAVE_LCD_COLOR
             if(graph_settings.colored)
-            {
                 rb->lcd_hline(LCD_WIDTH-1, x, y);
-            }
             else
-#       endif
-            rb->lcd_hline(0, x, y);
+                rb->lcd_hline(0, x, y);
+#else
+            if(graph_settings.colored)
+                grey_hline(LCD_WIDTH-1, x, y);
+            else
+                grey_hline(0, x, y);
+#endif
         }
     }
-#   ifdef HAVE_LCD_COLOR
+#ifdef HAVE_LCD_COLOR
     rb->lcd_set_foreground(LCD_DEFAULT_FG);
-#   endif
+#else
+    grey_set_foreground(LCD_DEFAULT_FG);
+#endif
 }
 
 void draw_bars_vertical(void)
@@ -652,8 +719,14 @@ void draw_bars_vertical(void)
 
     calc_magnitudes(graph_settings.logarithmic);
 
+#ifdef HAVE_LCD_COLOR
     rb->lcd_set_foreground(LCD_DEFAULT_FG);
-    int64_t bars_values[bars], bars_max = 0, avg = 0;
+    rb->lcd_set_background(LCD_DEFAULT_BG);
+#else
+    grey_set_foreground(LCD_DEFAULT_FG);
+    grey_set_background(LCD_DEFAULT_BG);
+#endif
+    uint64_t bars_values[bars], bars_max = 0, avg = 0;
     unsigned int i, bars_idx = 0;
     for (i = 0; i < ARRAYSIZE_PLOT; ++i)
     {
@@ -688,7 +761,11 @@ void draw_bars_vertical(void)
         y = Q16_MUL(vfactor, bars_values[i]) + (1 << 15);
         y >>= 16;
 
+#ifdef HAVE_LCD_COLOR
         rb->lcd_fillrect(x, LCD_HEIGHT - y, width, y);
+#else
+        grey_fillrect(x, LCD_HEIGHT - y, width, y);
+#endif
     }
 }
 
@@ -699,7 +776,11 @@ void draw_bars_horizontal(void)
 
     calc_magnitudes(graph_settings.logarithmic);
 
+#ifdef HAVE_LCD_COLOR
     rb->lcd_set_foreground(LCD_DEFAULT_FG);
+#else
+    grey_set_foreground(LCD_DEFAULT_FG);
+#endif
     int64_t bars_values[bars], bars_max = 0, avg = 0;
     unsigned int i, bars_idx = 0;
     for (i = 0; i < ARRAYSIZE_PLOT; ++i)
@@ -735,11 +816,14 @@ void draw_bars_horizontal(void)
         x = Q16_MUL(hfactor, bars_values[i]) + (1 << 15);
         x >>= 16;
 
+#ifdef HAVE_LCD_COLOR
         rb->lcd_fillrect(0, y, x, height);
+#else
+        grey_fillrect(0, y, x, height);
+#endif
     }
 }
 
-#ifdef HAVE_LCD_COLOR
 void draw_spectrogram_vertical(void)
 {
     const int32_t scale_factor = ARRAYSIZE_PLOT / LCD_HEIGHT,
@@ -754,7 +838,11 @@ void draw_spectrogram_vertical(void)
     if(graph_settings.changed.mode || graph_settings.changed.orientation)
     {
         graph_settings.spectrogram.column = 0;
+#ifdef HAVE_LCD_COLOR
         rb->lcd_clear_display();
+#else
+        grey_clear_display();
+#endif
     }
 
     int i, y = LCD_HEIGHT-1, count = 0, rem_count = 0;
@@ -797,8 +885,13 @@ void draw_spectrogram_vertical(void)
             else if (color < 0)
                 color = 0;
 
+#ifdef HAVE_LCD_COLOR
             rb->lcd_set_foreground(fft_colors[color]);
             rb->lcd_drawpixel(graph_settings.spectrogram.column, y);
+#else
+            grey_set_foreground(fft_colors[color]);
+            grey_drawpixel(graph_settings.spectrogram.column, y);
+#endif
 
             y--;
 
@@ -811,7 +904,11 @@ void draw_spectrogram_vertical(void)
     if(graph_settings.spectrogram.column != LCD_WIDTH-1)
         graph_settings.spectrogram.column++;
     else
+#ifdef HAVE_LCD_COLOR
         xlcd_scroll_left(1);
+#else
+        grey_scroll_left(1);
+#endif
 }
 void draw_spectrogram_horizontal(void)
 {
@@ -827,7 +924,11 @@ void draw_spectrogram_horizontal(void)
     if(graph_settings.changed.mode || graph_settings.changed.orientation)
     {
         graph_settings.spectrogram.row = 0;
+#ifdef HAVE_LCD_COLOR
         rb->lcd_clear_display();
+#else
+        grey_clear_display();
+#endif
     }
 
     int i, x = 0, count = 0, rem_count = 0;
@@ -870,8 +971,13 @@ void draw_spectrogram_horizontal(void)
             else if (color < 0)
                 color = 0;
 
+#ifdef HAVE_LCD_COLOR
             rb->lcd_set_foreground(fft_colors[color]);
             rb->lcd_drawpixel(x, graph_settings.spectrogram.row);
+#else
+            grey_set_foreground(fft_colors[color]);
+            grey_drawpixel(x, graph_settings.spectrogram.row);
+#endif
 
             x++;
 
@@ -884,9 +990,13 @@ void draw_spectrogram_horizontal(void)
     if(graph_settings.spectrogram.row != LCD_HEIGHT-1)
         graph_settings.spectrogram.row++;
     else
+#ifdef HAVE_LCD_COLOR
         xlcd_scroll_up(1);
-}
+#else
+        grey_scroll_up(1);
 #endif
+}
+
 /********************* End of plotting functions (modes) *********************/
 
 enum plugin_status plugin_start(const void* parameter)
@@ -897,6 +1007,21 @@ enum plugin_status plugin_start(const void* parameter)
         rb->splash(HZ * 2, "No track playing. Exiting..");
         return PLUGIN_OK;
     }
+#ifndef HAVE_LCD_COLOR
+    unsigned char *gbuf;
+    size_t  gbuf_size = 0;
+    /* get the remainder of the plugin buffer */
+    gbuf = (unsigned char *) rb->plugin_get_buffer(&gbuf_size);
+
+    /* initialize the greyscale buffer.*/
+    if (!grey_init(gbuf, gbuf_size, GREY_ON_COP | GREY_BUFFERED,
+                   LCD_WIDTH, LCD_HEIGHT, NULL))
+    {
+        rb->splash(HZ, "Couldn't init greyscale display");
+        return PLUGIN_ERROR;
+    }
+    grey_show(true); /* switch on greyscale overlay */
+#endif
 
 #if LCD_DEPTH > 1
     rb->lcd_set_backdrop(NULL);
@@ -916,11 +1041,10 @@ enum plugin_status plugin_start(const void* parameter)
     graph_settings.changed.mode = false;
     graph_settings.changed.scale = false;
     graph_settings.changed.orientation = false;
-#ifdef HAVE_LCD_COLOR
     graph_settings.colored = false;
     graph_settings.spectrogram.row = 0;
     graph_settings.spectrogram.column = 0;
-#endif
+
     bool changed_window = false;
 
     size_t size = sizeof(buffer);
@@ -944,6 +1068,7 @@ enum plugin_status plugin_start(const void* parameter)
     while (run)
     {
         value = (kiss_fft_scalar*) rb->pcm_get_peak_buffer(&count);
+        DEBUGF("Got %i bytes of data\n", count);
         if (value == 0 || count == 0)
         {
             rb->yield();
@@ -1041,6 +1166,9 @@ enum plugin_status plugin_start(const void* parameter)
     }
 #ifdef HAVE_ADJUSTABLE_CPU_FREQ
     rb->cpu_boost(false);
+#endif
+#ifndef HAVE_LCD_COLOR
+    grey_release();
 #endif
     backlight_use_settings();
     return PLUGIN_OK;
