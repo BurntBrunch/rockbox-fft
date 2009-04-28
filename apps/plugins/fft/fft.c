@@ -377,6 +377,13 @@ void draw(const unsigned char* message)
         last_orientation = graph_settings.orientation_vertical;
         graph_settings.changed.orientation = true;
     }
+#ifdef HAVE_LCD_COLOR
+    rb->lcd_set_foreground(LCD_DEFAULT_FG);
+    rb->lcd_set_background(LCD_DEFAULT_BG);
+#else
+    grey_set_foreground(LCD_DEFAULT_FG);
+    grey_set_background(LCD_DEFAULT_BG);
+#endif
 
     switch (graph_settings.mode)
     {
@@ -491,7 +498,7 @@ void draw(const unsigned char* message)
         }
         else
         {
-            /* In all other cases, just erase the popup */
+            /* In all other cases, erase the popup */
 #ifdef HAVE_LCD_COLOR
             rb->lcd_set_foreground(LCD_DEFAULT_BG);
             rb->lcd_fillrect(LCD_WIDTH-2-x, 0, LCD_WIDTH-1, y);
@@ -610,11 +617,6 @@ void draw_lines_vertical(void)
 #endif
         }
     }
-#ifdef HAVE_LCD_COLOR
-    rb->lcd_set_foreground(LCD_DEFAULT_FG);
-#else
-    grey_set_foreground(LCD_DEFAULT_FG);
-#endif
 }
 
 void draw_lines_horizontal(void)
@@ -714,18 +716,11 @@ void draw_lines_horizontal(void)
 
 void draw_bars_vertical(void)
 {
-    static const unsigned int bars = 14, border = 3, items = ARRAYSIZE_PLOT
+    static const unsigned int bars = 20, border = 2, items = ARRAYSIZE_PLOT
             / bars, width = (LCD_WIDTH - ((bars - 1) * border)) / bars;
 
     calc_magnitudes(graph_settings.logarithmic);
 
-#ifdef HAVE_LCD_COLOR
-    rb->lcd_set_foreground(LCD_DEFAULT_FG);
-    rb->lcd_set_background(LCD_DEFAULT_BG);
-#else
-    grey_set_foreground(LCD_DEFAULT_FG);
-    grey_set_background(LCD_DEFAULT_BG);
-#endif
     uint64_t bars_values[bars], bars_max = 0, avg = 0;
     unsigned int i, bars_idx = 0;
     for (i = 0; i < ARRAYSIZE_PLOT; ++i)
@@ -735,8 +730,9 @@ void draw_bars_vertical(void)
         {
             /* Calculate the average value and keep the fractional part
              * for some added precision */
-            avg = Q16_DIV(avg, items << 16); /* s15.16 */
+            avg = Q16_DIV(avg, items << 16);
             bars_values[bars_idx] = avg;
+            DEBUGF("%s: bars_value %i: %llu\n", __func__, bars_idx, avg);
 
             if (bars_values[bars_idx] > bars_max)
                 bars_max = bars_values[bars_idx];
@@ -749,10 +745,11 @@ void draw_bars_vertical(void)
     if(bars_max == 0) /* nothing to draw */
         return;
 
+    DEBUGF("%s: max: %llu\n", __func__, bars_max);
     /* Give the graph some headroom */
     bars_max = Q16_MUL(bars_max, float_q16(1.1));
 
-    int64_t vfactor = Q16_DIV(LCD_HEIGHT << 16, bars_max);
+    uint64_t vfactor = Q16_DIV(LCD_HEIGHT << 16, bars_max);
 
     for (i = 0; i < bars; ++i)
     {
@@ -760,11 +757,11 @@ void draw_bars_vertical(void)
         int y;
         y = Q16_MUL(vfactor, bars_values[i]) + (1 << 15);
         y >>= 16;
-
+        DEBUGF("%s: bar: %i\n", __func__, y);
 #ifdef HAVE_LCD_COLOR
-        rb->lcd_fillrect(x, LCD_HEIGHT - y, width, y);
+        rb->lcd_fillrect(x, LCD_HEIGHT - y - 1, width, y);
 #else
-        grey_fillrect(x, LCD_HEIGHT - y, width, y);
+        grey_fillrect(x, LCD_HEIGHT - y - 1, width, y);
 #endif
     }
 }
@@ -827,12 +824,13 @@ void draw_bars_horizontal(void)
 void draw_spectrogram_vertical(void)
 {
     const int32_t scale_factor = ARRAYSIZE_PLOT / LCD_HEIGHT,
-        remaining_div =
-            ( Q16_DIV((scale_factor*LCD_HEIGHT) << 16,
-                      (ARRAYSIZE_PLOT-scale_factor*LCD_HEIGHT) << 16)
-             + (1<<15) ) >> 16,
         colors_per_val_log = Q16_DIV((COLORS-1) << 16, QLOG_MAX),
         colors_per_val_lin = Q16_DIV((COLORS-1) << 16, QLIN_MAX);
+    const int32_t remaining_div =
+        (ARRAYSIZE_PLOT-scale_factor*LCD_HEIGHT) > 0 ?
+        ( Q16_DIV((scale_factor*LCD_HEIGHT) << 16,
+                  (ARRAYSIZE_PLOT-scale_factor*LCD_HEIGHT) << 16)
+         + (1<<15) ) >> 16 : 0;
 
     calc_magnitudes(graph_settings.logarithmic);
     if(graph_settings.changed.mode || graph_settings.changed.orientation)
@@ -889,6 +887,7 @@ void draw_spectrogram_vertical(void)
             rb->lcd_set_foreground(fft_colors[color]);
             rb->lcd_drawpixel(graph_settings.spectrogram.column, y);
 #else
+            DEBUGF("%s: color: %li\n", __func__, color);
             grey_set_foreground(fft_colors[color]);
             grey_drawpixel(graph_settings.spectrogram.column, y);
 #endif
@@ -1068,7 +1067,6 @@ enum plugin_status plugin_start(const void* parameter)
     while (run)
     {
         value = (kiss_fft_scalar*) rb->pcm_get_peak_buffer(&count);
-        DEBUGF("Got %i bytes of data\n", count);
         if (value == 0 || count == 0)
         {
             rb->yield();
