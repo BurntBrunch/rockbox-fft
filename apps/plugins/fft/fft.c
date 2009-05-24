@@ -826,6 +826,7 @@ void draw_spectrogram_vertical(void)
     const int32_t scale_factor = ARRAYSIZE_PLOT / LCD_HEIGHT,
         colors_per_val_log = Q16_DIV((COLORS-1) << 16, QLOG_MAX),
         colors_per_val_lin = Q16_DIV((COLORS-1) << 16, QLIN_MAX);
+
     const int32_t remaining_div =
         (ARRAYSIZE_PLOT-scale_factor*LCD_HEIGHT) > 0 ?
         ( Q16_DIV((scale_factor*LCD_HEIGHT) << 16,
@@ -912,12 +913,14 @@ void draw_spectrogram_vertical(void)
 void draw_spectrogram_horizontal(void)
 {
     const int32_t scale_factor = ARRAYSIZE_PLOT / LCD_WIDTH,
-        remaining_div =
-            ( Q16_DIV((scale_factor*LCD_WIDTH) << 16,
-                      (ARRAYSIZE_PLOT-scale_factor*LCD_WIDTH) << 16)
-             + (1<<15) ) >> 16,
          colors_per_val_log = Q16_DIV((COLORS-1) << 16, QLOG_MAX),
          colors_per_val_lin = Q16_DIV((COLORS-1) << 16, QLIN_MAX);
+
+    const int32_t remaining_div =
+            (ARRAYSIZE_PLOT-scale_factor*LCD_WIDTH) > 0 ?
+            ( Q16_DIV((scale_factor*LCD_WIDTH) << 16,
+                      (ARRAYSIZE_PLOT-scale_factor*LCD_WIDTH) << 16)
+             + (1<<15) ) >> 16 : 0;
 
     calc_magnitudes(graph_settings.logarithmic);
     if(graph_settings.changed.mode || graph_settings.changed.orientation)
