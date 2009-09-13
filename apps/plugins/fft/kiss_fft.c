@@ -320,7 +320,7 @@ static
 void kf_factor(int n,int * facbuf)
 {
     int p=4;
-    int32_t floor_sqrt = fsqrt(n, 15) >> 15;
+    int32_t floor_sqrt = fp_sqrt(n, 15) >> 15;
 
     /*factor out powers of 4, powers of 2, then any remaining primes */
     do {

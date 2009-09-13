@@ -134,7 +134,7 @@ struct kiss_fft_state{
 #define  kf_cexp(x, k, n) \
 	do{ \
 		int32_t div = Q_DIV( (k) << 16, (n) << 16, 16 ); \
-		long cos, sin = fsincos(div << 16, &cos); \
+		long cos, sin = fp_sincos(div << 16, &cos); \
 		(x)->r = ( Q_MUL(SAMP_MAX << 16, cos >> 15, 16) ) >> 16; \
 		(x)->i = ( Q_MUL(SAMP_MAX << 16, -1*(sin >> 15), 16) ) >> 16; \
 	}while(0)

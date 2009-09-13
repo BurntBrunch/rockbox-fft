@@ -249,7 +249,7 @@ static long next_update = 0;
 /* Returns logarithmically scaled values in S15.16 format */
 inline int32_t get_log_value(int32_t value)
 {
-    return Q16_DIV(flog(value), QLN_10);
+    return Q16_DIV(fp16_log(value), QLN_10);
 }
 
 /* Apply window function to input
@@ -267,8 +267,8 @@ void apply_window_func(char mode)
             size_t i;
             for (i = 0; i < ARRAYSIZE_IN; ++i)
             {
-                int32_t cos;
-                (void) fsincos(Q16_DIV(i << 16, (ARRAYSIZE_IN - 1) << 16) << 16,
+                long cos;
+                (void) fp_sincos(Q16_DIV(i << 16, (ARRAYSIZE_IN - 1) << 16) << 16,
                                &cos);
                 cos >>= 16;
 
@@ -277,7 +277,7 @@ void apply_window_func(char mode)
                                    (hamming_a - Q15_MUL(cos, hamming_b))) >> 15;
                 input[i].i = Q15_MUL(input[i].i << 15,
                                    (hamming_a - Q15_MUL(cos, hamming_b))) >> 15;
-            }
+            } 
             break;
         }
         case 1: /* Hann window */
@@ -285,8 +285,8 @@ void apply_window_func(char mode)
             size_t i;
             for (i = 0; i < ARRAYSIZE_IN; ++i)
             {
-                int32_t factor;
-                (void) fsincos(Q16_DIV(i << 16, (ARRAYSIZE_IN - 1) << 16) << 16,
+                long factor;
+                (void) fp_sincos(Q16_DIV(i << 16, (ARRAYSIZE_IN - 1) << 16) << 16,
                                &factor);
                 /* s16.15; cos( 2* pi * i/(ArraySize - 1))*/
                 factor >>= 16;
