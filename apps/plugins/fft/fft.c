@@ -19,10 +19,10 @@
  *
  ****************************************************************************/
 #include "plugin.h"
+
 #include "lib/helper.h"
 #include "lib/xlcd.h"
 #include "math.h"
-#include "thread.h"
 
 #ifndef HAVE_LCD_COLOR
 #include "lib/grey.h"
@@ -199,11 +199,9 @@ GREY_INFO_STRUCT
 #define FFT_CFG   kiss_fft_cfg
 
 /****************************** Globals ****************************/
-static struct mutex data_mutex;
-static kiss_fft_cfg state;
+
 static kiss_fft_cpx input[ARRAYSIZE_IN];
 static kiss_fft_cpx output[ARRAYSIZE_OUT];
-static int32_t magnitude_max;
 static int32_t plot[ARRAYSIZE_PLOT];
 static char buffer[BUFSIZE];
 
@@ -304,12 +302,17 @@ void apply_window_func(char mode)
 }
 
 /* Calculates the magnitudes from complex numbers and returns the maximum */
-void calc_magnitudes(bool logarithmic)
+int32_t calc_magnitudes(bool logarithmic)
 {
     int64_t tmp;
     size_t i;
 
+  //  static int32_t max_ = 0;
+  //  if(graph_settings.changed.scale)
+  //      max_ = 0;
+
     int32_t max = -2147483647;
+    //const int32_t scale_bits = 0;
 
     /* Calculate the magnitude, discarding the phase.
      * The sum of the squares can easily overflow the 15-bit (s15.16)
@@ -317,9 +320,11 @@ void calc_magnitudes(bool logarithmic)
     for (i = 0; i < ARRAYSIZE_PLOT; ++i)
     {
         tmp = output[i].r * output[i].r + output[i].i * output[i].i;
-        tmp <<= 16;
+        tmp <<= 16;//tmp <<=(16 - scale_bits);
 
         tmp = fsqrt64(tmp, 16);
+        //if (scale_bits > 0)
+        //    tmp = Q16_MUL(tmp, 1 << (16 + scale_bits/2));
 
         if (logarithmic)
             tmp = get_log_value(tmp & 0x7FFFFFFF);
@@ -329,7 +334,9 @@ void calc_magnitudes(bool logarithmic)
         if (plot[i] > max)
             max = plot[i];
     }
-    magnitude_max = max;
+   //if(max > max_)
+  //      max_ = max, DEBUGF("%s: %s max: %i\n", __func__, logarithmic ? "log" : "lin", max_);
+    return max;
 }
 /************************ End of math functions ***********************/
 
@@ -515,11 +522,11 @@ void draw(const unsigned char* message)
     graph_settings.changed.scale = false;
 
     /* we still have time in our time slot, so we sleep() */
-    /*if (*rb->current_tick < next_update)
-        rb->sleep(next_update - *rb->current_tick);*/
+    if (*rb->current_tick < next_update)
+        rb->sleep(next_update - *rb->current_tick);
 
-    /* end of next time slot
-    next_update = *rb->current_tick + HZ / refresh_rates[graph_settings.mode];*/
+    /* end of next time slot */
+    next_update = *rb->current_tick + HZ / refresh_rates[graph_settings.mode];
 }
 
 void draw_lines_vertical(void)
@@ -533,14 +540,16 @@ void draw_lines_vertical(void)
     if (old_scale != graph_settings.logarithmic)
         old_scale = graph_settings.logarithmic, max = 0; /* reset the graph on scaling mode change */
 
-    if (magnitude_max > max)
+    int32_t new_max = calc_magnitudes(graph_settings.logarithmic);
+
+    if (new_max > max)
     {
-        max = magnitude_max;
-        vfactor = Q16_DIV(LCD_HEIGHT << 16, max);
+        max = new_max;
+        vfactor = Q16_DIV(LCD_HEIGHT << 16, max); /* s15.16 */
         vfactor_count = Q16_DIV(vfactor, bins_per_pixel << 16); /* s15.16 */
     }
 
-    if (magnitude_max == 0 || max == 0) /* nothing to draw */
+    if (new_max == 0 || max == 0) /* nothing to draw */
         return;
 
 
@@ -621,10 +630,12 @@ void draw_lines_horizontal(void)
     if (graph_settings.changed.scale)
         max = 0; /* reset the graph on scaling mode change */
 
-    if (magnitude_max > max)
-        max = magnitude_max;
+    int32_t new_max = calc_magnitudes(graph_settings.logarithmic);
 
-    if (magnitude_max == 0 || max == 0) /* nothing to draw */
+    if (new_max > max)
+        max = new_max;
+
+    if (new_max == 0 || max == 0) /* nothing to draw */
         return;
 
     int32_t hfactor;
@@ -708,6 +719,8 @@ void draw_bars_vertical(void)
     static const unsigned int bars = 20, border = 2, items = ARRAYSIZE_PLOT
             / bars, width = (LCD_WIDTH - ((bars - 1) * border)) / bars;
 
+    calc_magnitudes(graph_settings.logarithmic);
+
     uint64_t bars_values[bars], bars_max = 0, avg = 0;
     unsigned int i, bars_idx = 0;
     for (i = 0; i < ARRAYSIZE_PLOT; ++i)
@@ -757,6 +770,8 @@ void draw_bars_horizontal(void)
 {
     static const unsigned int bars = 14, border = 3, items = ARRAYSIZE_PLOT
             / bars, height = (LCD_HEIGHT - ((bars - 1) * border)) / bars;
+
+    calc_magnitudes(graph_settings.logarithmic);
 
 #ifdef HAVE_LCD_COLOR
     rb->lcd_set_foreground(LCD_DEFAULT_FG);
@@ -818,6 +833,7 @@ void draw_spectrogram_vertical(void)
                   (ARRAYSIZE_PLOT-scale_factor*LCD_HEIGHT) << 16)
          + (1<<15) ) >> 16 : 0;
 
+    calc_magnitudes(graph_settings.logarithmic);
     if(graph_settings.changed.mode || graph_settings.changed.orientation)
     {
         graph_settings.spectrogram.column = 0;
@@ -906,6 +922,7 @@ void draw_spectrogram_horizontal(void)
                       (ARRAYSIZE_PLOT-scale_factor*LCD_WIDTH) << 16)
              + (1<<15) ) >> 16 : 0;
 
+    calc_magnitudes(graph_settings.logarithmic);
     if(graph_settings.changed.mode || graph_settings.changed.orientation)
     {
         graph_settings.spectrogram.row = 0;
@@ -984,17 +1001,6 @@ void draw_spectrogram_horizontal(void)
 
 /********************* End of plotting functions (modes) *********************/
 
-void process_data(void)
-{
-    rb->mutex_lock(&data_mutex);
-    apply_window_func(graph_settings.window_func);
-    kiss_fft(state, input, output);
-    calc_magnitudes(graph_settings.logarithmic);
-    rb->mutex_unlock(&data_mutex);
-    rb->thread_exit();
-}
-
-
 enum plugin_status plugin_start(const void* parameter)
 {
     (void) parameter;
@@ -1044,10 +1050,7 @@ enum plugin_status plugin_start(const void* parameter)
     bool changed_window = false;
 
     size_t size = sizeof(buffer);
-    state = kiss_fft_alloc(FFT_SIZE, 0, buffer, &size);
-
-    static long thread_stack[DEFAULT_STACK_SIZE/sizeof(long)];
-    rb->mutex_init(&data_mutex);
+    kiss_fft_cfg state = kiss_fft_alloc(FFT_SIZE, 0, buffer, &size);
 
     if (state == 0)
     {
@@ -1066,7 +1069,6 @@ enum plugin_status plugin_start(const void* parameter)
 
     while (run)
     {
-        rb->mutex_lock(&data_mutex);
         value = (kiss_fft_scalar*) rb->pcm_get_peak_buffer(&count);
         if (value == 0 || count == 0)
         {
@@ -1095,15 +1097,13 @@ enum plugin_status plugin_start(const void* parameter)
 
             if (fft_idx == ARRAYSIZE_IN)
             {
-                rb->mutex_unlock(&data_mutex);
-                unsigned int thread_id = rb->create_thread(process_data, thread_stack,
-                                                           sizeof(thread_stack), 0,
-                                                           "fft calculation"
-                                                           IF_PRIO(, 25)
-                                                           IF_COP(, COP));
-                rb->thread_wait(thread_id);
-                rb->mutex_lock(&data_mutex);
+                apply_window_func(graph_settings.window_func);
 
+                /* Play nice - the sleep at the end of draw()
+                 * only tries to maintain the frame rate */
+                rb->yield();
+                kiss_fft(state, input, output);
+                rb->yield();
                 if(changed_window)
                 {
                     draw(window_text[graph_settings.window_func]);
