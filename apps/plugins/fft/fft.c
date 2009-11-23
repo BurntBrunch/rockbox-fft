@@ -307,24 +307,17 @@ int32_t calc_magnitudes(bool logarithmic)
     int64_t tmp;
     size_t i;
 
-  //  static int32_t max_ = 0;
-  //  if(graph_settings.changed.scale)
-  //      max_ = 0;
-
     int32_t max = -2147483647;
-    //const int32_t scale_bits = 0;
-
+    
     /* Calculate the magnitude, discarding the phase.
      * The sum of the squares can easily overflow the 15-bit (s15.16)
      * requirement for fsqrt, so we scale the data down */
     for (i = 0; i < ARRAYSIZE_PLOT; ++i)
     {
         tmp = output[i].r * output[i].r + output[i].i * output[i].i;
-        tmp <<= 16;//tmp <<=(16 - scale_bits);
+        tmp <<= 16;
 
         tmp = fsqrt64(tmp, 16);
-        //if (scale_bits > 0)
-        //    tmp = Q16_MUL(tmp, 1 << (16 + scale_bits/2));
 
         if (logarithmic)
             tmp = get_log_value(tmp & 0x7FFFFFFF);
@@ -334,8 +327,6 @@ int32_t calc_magnitudes(bool logarithmic)
         if (plot[i] > max)
             max = plot[i];
     }
-   //if(max > max_)
-  //      max_ = max, DEBUGF("%s: %s max: %i\n", __func__, logarithmic ? "log" : "lin", max_);
     return max;
 }
 /************************ End of math functions ***********************/
