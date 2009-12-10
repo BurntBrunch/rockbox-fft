@@ -139,6 +139,13 @@ struct kiss_fft_state{
 		(x)->i = ( Q_MUL(SAMP_MAX << 16, -1*(sin >> 15), 16) ) >> 16; \
 	}while(0)
 
+#define  kf_cexp_round(x, k, n) \
+	do{ \
+		int32_t div = Q_DIV( (k) << 16, (n) << 16, 16 ) + (1 << 15); \
+		long cos, sin = fp_sincos(div << 16, &cos); \
+		(x)->r = ( Q_MUL(SAMP_MAX << 16, cos >> 15, 16) ) >> 16; \
+		(x)->i = ( Q_MUL(SAMP_MAX << 16, -1*(sin >> 15), 16) ) >> 16; \
+	}while(0)
 
 /* a debugging function */
 #define pcpx(c)\

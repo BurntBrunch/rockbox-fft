@@ -186,21 +186,23 @@ GREY_INFO_STRUCT
 #include "pluginbitmaps/fft_gradient_vertical.h"
 #include "pluginbitmaps/fft_colors.h"
 
-#include "kiss_fft.h"
+#include "kiss_fftr.h"
 #include "_kiss_fft_guts.h" /* sizeof(struct kiss_fft_state) */
 
-#define FFT_SIZE (1024)
+#define FFT_SIZE (2048)
 #define ARRAYSIZE_IN FFT_SIZE
-#define ARRAYSIZE_OUT FFT_SIZE
-#define ARRAYSIZE_PLOT FFT_SIZE/2
-#define BUFSIZE (sizeof(struct kiss_fft_state)+sizeof(kiss_fft_cpx)*(FFT_SIZE-1))
-#define FFT_ALLOC kiss_fft_alloc
-#define FFT_FFT   kiss_fft
-#define FFT_CFG   kiss_fft_cfg
+#define ARRAYSIZE_OUT FFT_SIZE/2
+#define ARRAYSIZE_PLOT FFT_SIZE/4
+#define BUFSIZE_FFT (sizeof(struct kiss_fft_state)+sizeof(kiss_fft_cpx)*(FFT_SIZE-1))
+#define BUFSIZE_FFTR (BUFSIZE_FFT+sizeof(struct kiss_fftr_state)+sizeof(kiss_fft_cpx)*(FFT_SIZE*3/2))
+#define BUFSIZE BUFSIZE_FFTR
+#define FFT_ALLOC kiss_fftr_alloc
+#define FFT_FFT   kiss_fftr
+#define FFT_CFG   kiss_fftr_cfg
 
 /****************************** Globals ****************************/
 
-static kiss_fft_cpx input[ARRAYSIZE_IN];
+static kiss_fft_scalar input[ARRAYSIZE_IN];
 static kiss_fft_cpx output[ARRAYSIZE_OUT];
 static int32_t plot[ARRAYSIZE_PLOT];
 static char buffer[BUFSIZE];
@@ -271,10 +273,10 @@ void apply_window_func(char mode)
                 cos >>= 16;
 
                 /* value *= v(hamming_a - hamming_b * cos( 2 * pi * i/(ArraySize - 1) ) ) */
-                input[i].r = Q15_MUL(input[i].r << 15,
+                input[i] = Q15_MUL(input[i] << 15,
                                    (hamming_a - Q15_MUL(cos, hamming_b))) >> 15;
-                input[i].i = Q15_MUL(input[i].i << 15,
-                                   (hamming_a - Q15_MUL(cos, hamming_b))) >> 15;
+                /*input[i].i = Q15_MUL(input[i].i << 15,
+                                   (hamming_a - Q15_MUL(cos, hamming_b))) >> 15;*/
             } 
             break;
         }
@@ -293,8 +295,8 @@ void apply_window_func(char mode)
                 /* 0.5 - 0.5 * cos( 2* pi * i/(ArraySize - 1)))*/
                 factor = (1 << 14) - factor;
 
-                input[i].r = Q15_MUL(input[i].r << 15, factor) >> 15;
-                input[i].i = Q15_MUL(input[i].i << 15, factor) >> 15;
+                input[i] = Q15_MUL(input[i] << 15, factor) >> 15;
+                /*input[i].i = Q15_MUL(input[i].i << 15, factor) >> 15;*/
             }
             break;
         }
@@ -1041,7 +1043,7 @@ enum plugin_status plugin_start(const void* parameter)
     bool changed_window = false;
 
     size_t size = sizeof(buffer);
-    kiss_fft_cfg state = kiss_fft_alloc(FFT_SIZE, 0, buffer, &size);
+    FFT_CFG state = FFT_ALLOC(FFT_SIZE, 0, buffer, &size);
 
     if (state == 0)
     {
@@ -1050,7 +1052,7 @@ enum plugin_status plugin_start(const void* parameter)
     }
 
 
-    kiss_fft_scalar left, right;
+    kiss_fft_scalar left;//, right;
     kiss_fft_scalar* value;
     int count;
 
@@ -1075,11 +1077,11 @@ enum plugin_status plugin_start(const void* parameter)
                 left = *(value + idx);
                 idx += 2;
 
-                right = *(value + idx);
-                idx += 2;
+                /*right = *(value + idx);
+                idx += 2;*/	
 
-                input[fft_idx].r = left;
-                input[fft_idx].i = right;
+                input[fft_idx] = left;
+                /*input[fft_idx].i = right;*/
                 fft_idx++;
 
                 if (fft_idx == ARRAYSIZE_IN)
@@ -1093,7 +1095,7 @@ enum plugin_status plugin_start(const void* parameter)
                 /* Play nice - the sleep at the end of draw()
                  * only tries to maintain the frame rate */
                 rb->yield();
-                kiss_fft(state, input, output);
+                FFT_FFT(state, input, output);
                 rb->yield();
                 if(changed_window)
                 {
