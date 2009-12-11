@@ -188,17 +188,23 @@ GREY_INFO_STRUCT
 
 #include "kiss_fftr.h"
 #include "_kiss_fft_guts.h" /* sizeof(struct kiss_fft_state) */
+#include "const.h"
 
-#define FFT_SIZE (2048)
-#define ARRAYSIZE_IN FFT_SIZE
-#define ARRAYSIZE_OUT FFT_SIZE/2
-#define ARRAYSIZE_PLOT FFT_SIZE/4
+#define FFT_SIZE 2048
+#define ARRAYSIZE_IN (FFT_SIZE)
+#define ARRAYSIZE_OUT (FFT_SIZE/2)
+#define ARRAYSIZE_PLOT (FFT_SIZE/4)
 #define BUFSIZE_FFT (sizeof(struct kiss_fft_state)+sizeof(kiss_fft_cpx)*(FFT_SIZE-1))
 #define BUFSIZE_FFTR (BUFSIZE_FFT+sizeof(struct kiss_fftr_state)+sizeof(kiss_fft_cpx)*(FFT_SIZE*3/2))
 #define BUFSIZE BUFSIZE_FFTR
 #define FFT_ALLOC kiss_fftr_alloc
 #define FFT_FFT   kiss_fftr
 #define FFT_CFG   kiss_fftr_cfg
+
+#define __COEFF(type,size) type##_##size
+#define _COEFF(x, y) __COEFF(x,y) /* force the preprocessor to evaluate FFT_SIZE) */
+#define HANN_COEFF _COEFF(hann, FFT_SIZE)
+#define HAMMING_COEFF _COEFF(hamming, FFT_SIZE)
 
 /****************************** Globals ****************************/
 
@@ -262,21 +268,11 @@ void apply_window_func(char mode)
     {
         case 0: /* Hamming window */
         {
-            const int32_t hamming_a = float_q(0.53836, 15), hamming_b =
-                    float_q(0.46164, 15);
             size_t i;
             for (i = 0; i < ARRAYSIZE_IN; ++i)
             {
-                long cos;
-                (void) fp_sincos(Q16_DIV(i << 16, (ARRAYSIZE_IN - 1) << 16) << 16,
-                               &cos);
-                cos >>= 16;
-
-                /* value *= v(hamming_a - hamming_b * cos( 2 * pi * i/(ArraySize - 1) ) ) */
                 input[i] = Q15_MUL(input[i] << 15,
-                                   (hamming_a - Q15_MUL(cos, hamming_b))) >> 15;
-                /*input[i].i = Q15_MUL(input[i].i << 15,
-                                   (hamming_a - Q15_MUL(cos, hamming_b))) >> 15;*/
+                                   HAMMING_COEFF[i]) >> 15;
             } 
             break;
         }
@@ -285,18 +281,7 @@ void apply_window_func(char mode)
             size_t i;
             for (i = 0; i < ARRAYSIZE_IN; ++i)
             {
-                long factor;
-                (void) fp_sincos(Q16_DIV(i << 16, (ARRAYSIZE_IN - 1) << 16) << 16,
-                               &factor);
-                /* s16.15; cos( 2* pi * i/(ArraySize - 1))*/
-                factor >>= 16;
-                /* 0.5 * cos( 2* pi * i/(ArraySize - 1))*/
-                factor = Q15_MUL( (1 << 14), factor);
-                /* 0.5 - 0.5 * cos( 2* pi * i/(ArraySize - 1)))*/
-                factor = (1 << 14) - factor;
-
-                input[i] = Q15_MUL(input[i] << 15, factor) >> 15;
-                /*input[i].i = Q15_MUL(input[i].i << 15, factor) >> 15;*/
+                input[i] = Q15_MUL(input[i] << 15, HANN_COEFF[i]) >> 15;
             }
             break;
         }
