@@ -23,6 +23,7 @@
 #include "lib/helper.h"
 #include "lib/xlcd.h"
 #include "math.h"
+#include "thread.h"
 
 #ifndef HAVE_LCD_COLOR
 #include "lib/grey.h"
@@ -222,7 +223,10 @@ static char buffer[BUFSIZE];
 const unsigned char* modes_text[] = { "Lines", "Bars", "Spectrogram" };
 const unsigned char* scales_text[] = { "Linear scale", "Logarithmic scale" };
 const unsigned char* window_text[] = { "Hamming window", "Hann window" };
-const unsigned int32_t refresh_rates[] = { 6, 10, 8 };
+
+struct mutex input_mutex;
+bool input_thread_run = true;
+bool input_thread_has_data = false;
 
 struct {
     int32_t mode;
@@ -243,7 +247,6 @@ struct {
 
 #define COLORS BMPWIDTH_fft_colors
 
-static long next_update = 0;
 /************************* End of globals *************************/
 
 /************************* Math functions *************************/
@@ -498,13 +501,6 @@ void draw(const unsigned char* message)
     graph_settings.changed.mode =  false;
     graph_settings.changed.orientation = false;
     graph_settings.changed.scale = false;
-
-    /* we still have time in our time slot, so we sleep() */
-    if (*rb->current_tick < next_update)
-        rb->sleep(next_update - *rb->current_tick);
-
-    /* end of next time slot */
-    next_update = *rb->current_tick + HZ / refresh_rates[graph_settings.mode];
 }
 
 void draw_lines_vertical(void)
@@ -979,6 +975,51 @@ void draw_spectrogram_horizontal(void)
 
 /********************* End of plotting functions (modes) *********************/
 
+static long thread_stack[DEFAULT_STACK_SIZE/sizeof(long)];
+void input_thread_entry(void)
+{
+	kiss_fft_scalar * value;
+	kiss_fft_scalar left;
+	int count;
+	int idx = 0; /* offset in the buffer */
+	int fft_idx = 0; /* offset in input */
+	while(true)
+	{
+		rb->mutex_lock(&input_mutex);
+		if(!input_thread_run)
+			rb->thread_exit();
+
+		value = (kiss_fft_scalar*) rb->pcm_get_peak_buffer(&count);
+		
+		if (value == 0 || count == 0)
+		{
+			rb->mutex_unlock(&input_mutex);
+			rb->yield();
+			continue;
+		}
+		else
+		{
+			idx = fft_idx = 0;
+			do
+			{
+				left = *(value + idx);
+				idx += 2;
+
+				input[fft_idx] = left;
+				fft_idx++;
+
+				if (fft_idx == ARRAYSIZE_IN)
+					break;
+			} while (idx < count);
+		}
+		if(fft_idx == ARRAYSIZE_IN) // there are cases when we don't have enough data to fill the buffer
+		    input_thread_has_data = true;	
+		rb->mutex_unlock(&input_mutex);
+		rb->yield();
+	}
+}
+
+
 enum plugin_status plugin_start(const void* parameter)
 {
     (void) parameter;
@@ -1035,64 +1076,37 @@ enum plugin_status plugin_start(const void* parameter)
         DEBUGF("needed data: %i", (int) size);
         return PLUGIN_ERROR;
     }
-
-
-    kiss_fft_scalar left;//, right;
-    kiss_fft_scalar* value;
-    int count;
-
-    /* set the end of the first time slot - rest of the
-     * next_update work is done in draw() */
-    next_update = *rb->current_tick + HZ / refresh_rates[graph_settings.mode];
-
+	
+	unsigned int input_thread = rb->create_thread(&input_thread_entry, thread_stack, sizeof(thread_stack), 0, "fft input thread" IF_PRIO(, PRIORITY_BACKGROUND) IF_COP(, CPU));
+	rb->yield();
     while (run)
     {
-        value = (kiss_fft_scalar*) rb->pcm_get_peak_buffer(&count);
-        if (value == 0 || count == 0)
-        {
-            rb->yield();
-        }
-        else
-        {
-            int idx = 0; /* offset in the buffer */
-            int fft_idx = 0; /* offset in input */
+		rb->mutex_lock(&input_mutex);
+		if(!input_thread_has_data)
+		{
+			/* Make sure the input thread has started before doing anything else */
+			rb->mutex_unlock(&input_mutex);
+			rb->yield();
+			continue;
+		}
+		apply_window_func(graph_settings.window_func);
 
-            do
-            {
-                left = *(value + idx);
-                idx += 2;
+		/* Play nice - the sleep at the end of draw()
+		 * only tries to maintain the frame rate */
+		FFT_FFT(state, input, output);
+		if(changed_window)
+		{
+			draw(window_text[graph_settings.window_func]);
+			changed_window = false;
+		}
+		else
+			draw(0);
 
-                /*right = *(value + idx);
-                idx += 2;*/	
+		input_thread_has_data = false;
+        rb->mutex_unlock(&input_mutex);
+		rb->yield();
 
-                input[fft_idx] = left;
-                /*input[fft_idx].i = right;*/
-                fft_idx++;
-
-                if (fft_idx == ARRAYSIZE_IN)
-                    break;
-            } while (idx < count);
-
-            if (fft_idx == ARRAYSIZE_IN)
-            {
-                apply_window_func(graph_settings.window_func);
-
-                /* Play nice - the sleep at the end of draw()
-                 * only tries to maintain the frame rate */
-                rb->yield();
-                FFT_FFT(state, input, output);
-                rb->yield();
-                if(changed_window)
-                {
-                    draw(window_text[graph_settings.window_func]);
-                    changed_window = false;
-                }
-                else
-                    draw(0);
-                fft_idx = 0;
-            };
-        }
-        int button = rb->button_get(false);
+		int button = rb->button_get(false);
         switch (button)
         {
             case FFT_QUIT:
@@ -1143,6 +1157,13 @@ enum plugin_status plugin_start(const void* parameter)
 
         }
     }
+	
+	/* Handle our input thread. We haven't yield()'d since our last mutex_unlock, so we know we have the mutex */
+	rb->mutex_lock(&input_mutex);
+	input_thread_run = false;
+	rb->mutex_unlock(&input_mutex);
+	rb->thread_wait(input_thread);
+
 #ifdef HAVE_ADJUSTABLE_CPU_FREQ
     rb->cpu_boost(false);
 #endif
