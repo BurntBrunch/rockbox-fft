@@ -706,7 +706,6 @@ void draw_bars_vertical(void)
              * for some added precision */
             avg = Q16_DIV(avg, items << 16);
             bars_values[bars_idx] = avg;
-            DEBUGF("%s: bars_value %i: %llu\n", __func__, bars_idx, avg);
 
             if (bars_values[bars_idx] > bars_max)
                 bars_max = bars_values[bars_idx];
@@ -719,7 +718,6 @@ void draw_bars_vertical(void)
     if(bars_max == 0) /* nothing to draw */
         return;
 
-    DEBUGF("%s: max: %llu\n", __func__, bars_max);
     /* Give the graph some headroom */
     bars_max = Q16_MUL(bars_max, float_q16(1.1));
 
@@ -731,7 +729,6 @@ void draw_bars_vertical(void)
         int y;
         y = Q16_MUL(vfactor, bars_values[i]) + (1 << 15);
         y >>= 16;
-        DEBUGF("%s: bar: %i\n", __func__, y);
 #ifdef HAVE_LCD_COLOR
         rb->lcd_fillrect(x, LCD_HEIGHT - y - 1, width, y);
 #else
