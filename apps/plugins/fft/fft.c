@@ -274,8 +274,7 @@ void apply_window_func(char mode)
             size_t i;
             for (i = 0; i < ARRAYSIZE_IN; ++i)
             {
-                input[i] = Q15_MUL(input[i] << 15,
-                                   HAMMING_COEFF[i]) >> 15;
+                input[i] = Q15_MUL(input[i] << 15, HAMMING_COEFF[i]) >> 15;
             } 
             break;
         }
@@ -370,6 +369,7 @@ void draw(const unsigned char* message)
     {
         default:
         case 0: {
+
 #ifdef HAVE_LCD_COLOR
             rb->lcd_clear_display();
 #else
@@ -383,6 +383,7 @@ void draw(const unsigned char* message)
             break;
         }
         case 1: {
+
 #ifdef HAVE_LCD_COLOR
             rb->lcd_clear_display();
 #else
@@ -407,31 +408,33 @@ void draw(const unsigned char* message)
 
     if (show_message > 0)
     {
+		/* We have a message to show */
+
         int x, y;
 #ifdef HAVE_LCD_COLOR
         rb->lcd_getstringsize(last_message, &x, &y);
 #else
         grey_getstringsize(last_message, &x, &y);
 #endif
+		/* x and y give the size of the box for the popup */
         x += 6; /* 3 px of horizontal padding and */
         y += 4; /* 2 px of vertical padding */
 
-        /* In vertical spectrogram mode, leave space for the popup */
-        if(graph_settings.mode == 2)
-        {
-            if(graph_settings.orientation_vertical &&
-               graph_settings.spectrogram.column > LCD_WIDTH-x-2)
-            {
+        /* In vertical spectrogram mode, leave space for the popup
+		 * before actually drawing it (if space is needed) */
+        if(graph_settings.mode == 2 &&
+		   graph_settings.orientation_vertical &&
+           graph_settings.spectrogram.column > LCD_WIDTH-x-2) 
+		{
 #ifdef HAVE_LCD_COLOR
-                xlcd_scroll_left(graph_settings.spectrogram.column -
-                                 (LCD_WIDTH - x - 1));
+			xlcd_scroll_left(graph_settings.spectrogram.column -
+							 (LCD_WIDTH - x - 1));
 #else
-                grey_scroll_left(graph_settings.spectrogram.column -
-                                 (LCD_WIDTH - x - 1));
+			grey_scroll_left(graph_settings.spectrogram.column -
+							 (LCD_WIDTH - x - 1));
 #endif
-                graph_settings.spectrogram.column = LCD_WIDTH - x - 2;
-            }
-        }
+			graph_settings.spectrogram.column = LCD_WIDTH - x - 2;
+		}
 
 #ifdef HAVE_LCD_COLOR
         rb->lcd_set_foreground(LCD_DARKGRAY);
@@ -455,42 +458,51 @@ void draw(const unsigned char* message)
     }
     else if(last_message != 0)
     {
-        /* The popup shouldn't be shown anymore but we haven't deleted it yet*/
-        int x, y;
+		if(graph_settings.mode != 2)
+		{
+			/* These modes clear the screen themselves */
+			last_message = 0;
+		}
+		else /* Spectrogram mode - need to erase the popup */
+		{
+			int x, y;
 #ifdef HAVE_LCD_COLOR
-        rb->lcd_getstringsize(last_message, &x, &y);
+			rb->lcd_getstringsize(last_message, &x, &y);
 #else
-        grey_getstringsize(last_message, &x, &y);
+			grey_getstringsize(last_message, &x, &y);
 #endif
-        x += 6; /* 3 px of horizontal padding and */
-        y += 4; /* 2 px of vertical padding */
+			/* Recalculate the size */
+			x += 6; /* 3 px of horizontal padding and */
+			y += 4; /* 2 px of vertical padding */
 
-        if(graph_settings.mode == 2 && !graph_settings.orientation_vertical)
-        {
-            /* In horizontal spectrogram mode, just scroll up by Y lines */
+			if(!graph_settings.orientation_vertical)
+			{
+				/* In horizontal spectrogram mode, just scroll up by Y lines */
 #ifdef HAVE_LCD_COLOR
-            xlcd_scroll_up(y);
+				xlcd_scroll_up(y);
 #else
-            grey_scroll_up(y);
+				grey_scroll_up(y);
 #endif
-            graph_settings.spectrogram.row -= y;
-            if(graph_settings.spectrogram.row < 0)
-                graph_settings.spectrogram.row = 0;
-        }
-        else
-        {
-            /* In all other cases, erase the popup */
+				graph_settings.spectrogram.row -= y;
+				if(graph_settings.spectrogram.row < 0)
+					graph_settings.spectrogram.row = 0;
+			}
+			else
+			{
+				/* In vertical spectrogram mode, erase the popup */
 #ifdef HAVE_LCD_COLOR
-            rb->lcd_set_foreground(LCD_DEFAULT_BG);
-            rb->lcd_fillrect(LCD_WIDTH-2-x, 0, LCD_WIDTH-1, y);
-            rb->lcd_set_foreground(LCD_DEFAULT_FG);
+				rb->lcd_set_foreground(LCD_DEFAULT_BG);
+				rb->lcd_fillrect(LCD_WIDTH-2-x, 0, LCD_WIDTH-1, y);
+				rb->lcd_set_foreground(LCD_DEFAULT_FG);
 #else
-            grey_set_foreground(GREY_WHITE);
-            grey_fillrect(LCD_WIDTH-2-x, 0, LCD_WIDTH-1, y);
-            grey_set_foreground(GREY_BLACK);
+				grey_set_foreground(GREY_WHITE);
+				grey_fillrect(LCD_WIDTH-2-x, 0, LCD_WIDTH-1, y);
+				grey_set_foreground(GREY_BLACK);
 #endif
-        }
-        last_message = 0;
+			}
+			
+			last_message = 0;
+		}
     }
 #ifdef HAVE_LCD_COLOR
     rb->lcd_update();
@@ -744,11 +756,6 @@ void draw_bars_horizontal(void)
 
     calc_magnitudes(graph_settings.logarithmic);
 
-#ifdef HAVE_LCD_COLOR
-    rb->lcd_set_foreground(LCD_DEFAULT_FG);
-#else
-    grey_set_foreground(LCD_DEFAULT_FG);
-#endif
     int64_t bars_values[bars], bars_max = 0, avg = 0;
     unsigned int i, bars_idx = 0;
     for (i = 0; i < ARRAYSIZE_PLOT; ++i)
@@ -853,7 +860,7 @@ void draw_spectrogram_vertical(void)
                 color = Q16_MUL(avg, colors_per_val_log) >> 16;
             else
                 color = Q16_MUL(avg, colors_per_val_lin) >> 16;
-            if(color >= COLORS) /* TODO: investigate why we get these cases */
+            if(color >= COLORS) /* TODO These happen because we don't normalize the values to be above 1 and log() returns negative numbers. I think. */
                 color = COLORS-1;
             else if (color < 0)
                 color = 0;
@@ -863,7 +870,7 @@ void draw_spectrogram_vertical(void)
 				color = Q16_MUL(avg, grey_vals_per_val_log) >> 16;
 			else
 				color = Q16_MUL(avg, grey_vals_per_val_lin) >> 16;
-            if(color > 255) /* TODO: investigate why we get these cases */
+            if(color > 255) 
                 color = 255;
             else if (color < 0)
                 color = 0;
@@ -894,6 +901,7 @@ void draw_spectrogram_vertical(void)
         grey_scroll_left(1);
 #endif
 }
+
 void draw_spectrogram_horizontal(void)
 {
     const int32_t scale_factor = ARRAYSIZE_PLOT / LCD_WIDTH,
@@ -955,7 +963,7 @@ void draw_spectrogram_horizontal(void)
                 color = Q16_MUL(avg, colors_per_val_log) >> 16;
             else
                 color = Q16_MUL(avg, colors_per_val_lin) >> 16;
-            if(color >= COLORS) /* TODO: investigate why we get these cases */
+            if(color >= COLORS) /* TODO same as _vertical */
                 color = COLORS-1;
             else if (color < 0)
                 color = 0;
@@ -965,8 +973,8 @@ void draw_spectrogram_horizontal(void)
 				color = Q16_MUL(avg, grey_vals_per_val_log) >> 16;
 			else
 				color = Q16_MUL(avg, grey_vals_per_val_lin) >> 16;
-            if(color > 255) /* TODO: investigate why we get these cases */
-                color = 255;
+            if(color > 255) 
+				color = 255;
             else if (color < 0)
                 color = 0;
 #endif
@@ -1020,6 +1028,11 @@ void input_thread_entry(void)
 			rb->mutex_unlock(&input_mutex);
 			rb->yield();
 			continue;
+			/* This block can introduce discontinuities in our data. Meaning, the FFT
+			 * will not be done a continuous segment of the signal. Which can be bad. Or not.
+			 * 
+			 * Anyway, this is a demo, not a scientific tool. If you want accuracy, do a proper
+			 * spectrum analysis.*/
 		}
 		else
 		{
@@ -1036,8 +1049,9 @@ void input_thread_entry(void)
 					break;
 			} while (idx < count);
 		}
-		if(fft_idx == ARRAYSIZE_IN) // there are cases when we don't have enough data to fill the buffer
+		if(fft_idx == ARRAYSIZE_IN) /* there are cases when we don't have enough data to fill the buffer */
 		    input_thread_has_data = true;	
+		
 		rb->mutex_unlock(&input_mutex);
 		rb->yield();
 	}
@@ -1065,7 +1079,7 @@ enum plugin_status plugin_start(const void* parameter)
         rb->splash(HZ, "Couldn't init greyscale display");
         return PLUGIN_ERROR;
     }
-    grey_show(true); /* switch on greyscale overlay */
+    grey_show(true); 
 #endif
 
 #if LCD_DEPTH > 1
@@ -1114,10 +1128,8 @@ enum plugin_status plugin_start(const void* parameter)
 			continue;
 		}
 		apply_window_func(graph_settings.window_func);
-
-		/* Play nice - the sleep at the end of draw()
-		 * only tries to maintain the frame rate */
 		FFT_FFT(state, input, output);
+
 		if(changed_window)
 		{
 			draw(window_text[graph_settings.window_func]);
