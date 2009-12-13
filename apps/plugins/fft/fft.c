@@ -362,8 +362,8 @@ void draw(const unsigned char* message)
     rb->lcd_set_foreground(LCD_DEFAULT_FG);
     rb->lcd_set_background(LCD_DEFAULT_BG);
 #else
-    grey_set_foreground(LCD_DEFAULT_FG);
-    grey_set_background(LCD_DEFAULT_BG);
+    grey_set_foreground(GREY_BLACK);
+    grey_set_background(GREY_WHITE);
 #endif
 
     switch (graph_settings.mode)
@@ -445,10 +445,10 @@ void draw(const unsigned char* message)
         grey_set_foreground(GREY_LIGHTGRAY);
         grey_fillrect(LCD_WIDTH-1-x, 0, LCD_WIDTH-1, y);
 
-        grey_set_foreground(LCD_DEFAULT_FG);
+        grey_set_foreground(GREY_BLACK);
         grey_set_background(GREY_LIGHTGRAY);
         grey_putsxy(LCD_WIDTH-1-x+3, 2, last_message);
-        grey_set_background(LCD_DEFAULT_BG);
+        grey_set_background(GREY_WHITE);
 #endif
 
         show_message--;
@@ -485,9 +485,9 @@ void draw(const unsigned char* message)
             rb->lcd_fillrect(LCD_WIDTH-2-x, 0, LCD_WIDTH-1, y);
             rb->lcd_set_foreground(LCD_DEFAULT_FG);
 #else
-            grey_set_foreground(LCD_DEFAULT_BG);
+            grey_set_foreground(GREY_WHITE);
             grey_fillrect(LCD_WIDTH-2-x, 0, LCD_WIDTH-1, y);
-            grey_set_foreground(LCD_DEFAULT_FG);
+            grey_set_foreground(GREY_BLACK);
 #endif
         }
         last_message = 0;
@@ -536,7 +536,7 @@ void draw_lines_vertical(void)
         rb->lcd_set_foreground(LCD_DEFAULT_BG);
 #else
         grey_gray_bitmap(fft_gradient_vertical, 0, 0, BMPWIDTH_fft_gradient_vertical, BMPHEIGHT_fft_gradient_vertical);
-        grey_set_foreground(LCD_DEFAULT_BG);
+        grey_set_foreground(GREY_WHITE);
 #endif
     }
 
@@ -625,7 +625,7 @@ void draw_lines_horizontal(void)
         rb->lcd_set_foreground(LCD_DEFAULT_BG);
 #else
         grey_gray_bitmap(fft_gradient_horizontal, 0, 0, BMPWIDTH_fft_gradient_horizontal, BMPHEIGHT_fft_gradient_horizontal);
-        grey_set_foreground(LCD_DEFAULT_BG);
+        grey_set_foreground(GREY_WHITE);
 #endif
     }
 
@@ -799,7 +799,9 @@ void draw_spectrogram_vertical(void)
 {
     const int32_t scale_factor = ARRAYSIZE_PLOT / LCD_HEIGHT,
         colors_per_val_log = Q16_DIV((COLORS-1) << 16, QLOG_MAX),
-        colors_per_val_lin = Q16_DIV((COLORS-1) << 16, QLIN_MAX);
+        colors_per_val_lin = Q16_DIV((COLORS-1) << 16, QLIN_MAX),
+		grey_vals_per_val_log = Q16_DIV(255 << 16, QLOG_MAX),
+		grey_vals_per_val_lin = Q16_DIV(255 << 16, QLIN_MAX);
 
     const int32_t remaining_div =
         (ARRAYSIZE_PLOT-scale_factor*LCD_HEIGHT) > 0 ?
@@ -848,22 +850,33 @@ void draw_spectrogram_vertical(void)
             int32_t color;
 
             avg = Q16_DIV(avg, count << 16);
+
+#ifdef HAVE_LCD_COLOR
             if(graph_settings.logarithmic)
                 color = Q16_MUL(avg, colors_per_val_log) >> 16;
             else
                 color = Q16_MUL(avg, colors_per_val_lin) >> 16;
-
             if(color >= COLORS) /* TODO: investigate why we get these cases */
                 color = COLORS-1;
             else if (color < 0)
                 color = 0;
 
+#else
+			if(graph_settings.logarithmic)
+				color = Q16_MUL(avg, grey_vals_per_val_log) >> 16;
+			else
+				color = Q16_MUL(avg, grey_vals_per_val_lin) >> 16;
+            if(color > 255) /* TODO: investigate why we get these cases */
+                color = 255;
+            else if (color < 0)
+                color = 0;
+#endif
+
 #ifdef HAVE_LCD_COLOR
             rb->lcd_set_foreground(fft_colors[color]);
             rb->lcd_drawpixel(graph_settings.spectrogram.column, y);
 #else
-            DEBUGF("%s: color: %li\n", __func__, color);
-            grey_set_foreground(fft_colors[color]);
+            grey_set_foreground(255 - color);
             grey_drawpixel(graph_settings.spectrogram.column, y);
 #endif
 
@@ -888,7 +901,9 @@ void draw_spectrogram_horizontal(void)
 {
     const int32_t scale_factor = ARRAYSIZE_PLOT / LCD_WIDTH,
          colors_per_val_log = Q16_DIV((COLORS-1) << 16, QLOG_MAX),
-         colors_per_val_lin = Q16_DIV((COLORS-1) << 16, QLIN_MAX);
+         colors_per_val_lin = Q16_DIV((COLORS-1) << 16, QLIN_MAX),
+		 grey_vals_per_val_log = Q16_DIV(255 << 16, QLOG_MAX),
+		 grey_vals_per_val_lin = Q16_DIV(255 << 16, QLIN_MAX);
 
     const int32_t remaining_div =
             (ARRAYSIZE_PLOT-scale_factor*LCD_WIDTH) > 0 ?
@@ -937,21 +952,33 @@ void draw_spectrogram_horizontal(void)
             int32_t color;
 
             avg = Q16_DIV(avg, count << 16);
+
+#ifdef HAVE_LCD_COLOR
             if(graph_settings.logarithmic)
                 color = Q16_MUL(avg, colors_per_val_log) >> 16;
             else
                 color = Q16_MUL(avg, colors_per_val_lin) >> 16;
-
             if(color >= COLORS) /* TODO: investigate why we get these cases */
                 color = COLORS-1;
             else if (color < 0)
                 color = 0;
 
+#else
+			if(graph_settings.logarithmic)
+				color = Q16_MUL(avg, grey_vals_per_val_log) >> 16;
+			else
+				color = Q16_MUL(avg, grey_vals_per_val_lin) >> 16;
+            if(color > 255) /* TODO: investigate why we get these cases */
+                color = 255;
+            else if (color < 0)
+                color = 0;
+#endif
+
 #ifdef HAVE_LCD_COLOR
             rb->lcd_set_foreground(fft_colors[color]);
             rb->lcd_drawpixel(x, graph_settings.spectrogram.row);
 #else
-            grey_set_foreground(fft_colors[color]);
+            grey_set_foreground(255 - color);
             grey_drawpixel(x, graph_settings.spectrogram.row);
 #endif
 
