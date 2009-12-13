@@ -41,7 +41,6 @@ GREY_INFO_STRUCT
 #   define FFT_ORIENTATION  BUTTON_F3
 #   define FFT_WINDOW     BUTTON_F1
 #   define FFT_SCALE       BUTTON_UP
-#   define FFT_COLOR     BUTTON_DOWN
 #   define FFT_QUIT     BUTTON_OFF
 
 #elif (CONFIG_KEYPAD == IRIVER_H100_PAD) || \
@@ -51,7 +50,6 @@ GREY_INFO_STRUCT
 #   define FFT_ORIENTATION  BUTTON_REC
 #   define FFT_WINDOW     BUTTON_SELECT
 #   define FFT_SCALE       BUTTON_UP
-#   define FFT_COLOR     BUTTON_DOWN
 #   define FFT_QUIT     BUTTON_OFF
 
 #elif (CONFIG_KEYPAD == IPOD_4G_PAD) || \
@@ -63,7 +61,6 @@ GREY_INFO_STRUCT
 #   define FFT_ORIENTATION  (BUTTON_SELECT | BUTTON_LEFT)
 #   define FFT_WINDOW     (BUTTON_SELECT | BUTTON_RIGHT)
 #   define FFT_SCALE         BUTTON_MENU
-#   define FFT_COLOR       BUTTON_PLAY
 #   define FFT_QUIT       (BUTTON_SELECT | BUTTON_MENU)
 
 #elif (CONFIG_KEYPAD == IAUDIO_X5M5_PAD)
@@ -72,7 +69,6 @@ GREY_INFO_STRUCT
 #   define FFT_ORIENTATION  BUTTON_SELECT
 #   define FFT_WINDOW     BUTTON_PLAY
 #   define FFT_SCALE       BUTTON_UP
-#   define FFT_COLOR     BUTTON_DOWN
 #   define FFT_QUIT     BUTTON_POWER
 
 #elif (CONFIG_KEYPAD == GIGABEAT_PAD)
@@ -81,7 +77,6 @@ GREY_INFO_STRUCT
 #   define FFT_SCALE       BUTTON_UP
 #   define FFT_ORIENTATION  BUTTON_SELECT
 #   define FFT_WINDOW        BUTTON_A
-#   define FFT_COLOR     BUTTON_DOWN
 #   define FFT_QUIT     BUTTON_POWER
 
 #elif (CONFIG_KEYPAD == SANSA_E200_PAD)
@@ -90,7 +85,6 @@ GREY_INFO_STRUCT
 #   define FFT_ORIENTATION  BUTTON_SELECT
 #   define FFT_WINDOW        BUTTON_REC
 #   define FFT_SCALE       BUTTON_UP
-#   define FFT_COLOR     BUTTON_DOWN
 #   define FFT_QUIT     BUTTON_POWER
 
 #elif (CONFIG_KEYPAD == SANSA_FUZE_PAD)
@@ -99,7 +93,6 @@ GREY_INFO_STRUCT
 #   define FFT_ORIENTATION  (BUTTON_SELECT | BUTTON_LEFT)
 #   define FFT_WINDOW     (BUTTON_SELECT | BUTTON_RIGHT)
 #   define FFT_SCALE       BUTTON_UP
-#   define FFT_COLOR     BUTTON_DOWN
 #   define FFT_QUIT     BUTTON_POWER
 
 #elif (CONFIG_KEYPAD == SANSA_C200_PAD) || \
@@ -109,7 +102,6 @@ GREY_INFO_STRUCT
 #   define FFT_ORIENTATION  BUTTON_UP
 #   define FFT_WINDOW        BUTTON_REC
 #   define FFT_SCALE         BUTTON_SELECT
-#   define FFT_COLOR       BUTTON_DOWN
 #   define FFT_QUIT       BUTTON_POWER
 #elif (CONFIG_KEYPAD == SANSA_CLIP_PAD)
 #   define FFT_PREV_GRAPH       BUTTON_LEFT
@@ -117,7 +109,6 @@ GREY_INFO_STRUCT
 #   define FFT_ORIENTATION  BUTTON_UP
 #   define FFT_WINDOW        BUTTON_HOME
 #   define FFT_SCALE         BUTTON_SELECT
-#   define FFT_COLOR       BUTTON_DOWN
 #   define FFT_QUIT       BUTTON_POWER
 
 #elif (CONFIG_KEYPAD == IRIVER_H10_PAD)
@@ -126,7 +117,6 @@ GREY_INFO_STRUCT
 #   define FFT_ORIENTATION      BUTTON_FF
 #   define FFT_WINDOW       BUTTON_SCROLL_UP
 #   define FFT_SCALE            BUTTON_REW
-#   define FFT_COLOR            BUTTON_PLAY
 #   define FFT_QUIT             BUTTON_POWER
 
 #elif (CONFIG_KEYPAD == GIGABEAT_S_PAD)
@@ -135,7 +125,6 @@ GREY_INFO_STRUCT
 #   define FFT_ORIENTATION      BUTTON_MENU
 #   define FFT_WINDOW     BUTTON_PREV
 #   define FFT_SCALE            BUTTON_UP
-#   define FFT_COLOR            BUTTON_DOWN
 #   define FFT_QUIT             BUTTON_BACK
 
 #elif (CONFIG_KEYPAD == MROBE100_PAD)
@@ -144,7 +133,6 @@ GREY_INFO_STRUCT
 #   define FFT_ORIENTATION      BUTTON_PLAY
 #   define FFT_WINDOW     BUTTON_SELECT
 #   define FFT_SCALE            BUTTON_UP
-#   define FFT_COLOR            BUTTON_DOWN
 #   define FFT_QUIT             BUTTON_POWER
 
 #elif CONFIG_KEYPAD == IAUDIO_M3_PAD
@@ -153,7 +141,6 @@ GREY_INFO_STRUCT
 #   define FFT_ORIENTATION      BUTTON_RC_MODE
 #   define FFT_WINDOW        BUTTON_RC_PLAY
 #   define FFT_SCALE            BUTTON_RC_VOL_UP
-#   define FFT_COLOR            BUTTON_RC_VOL_DOWN
 #   define FFT_QUIT             BUTTON_RC_REC
 
 #elif (CONFIG_KEYPAD == COWOND2_PAD)
@@ -167,7 +154,6 @@ GREY_INFO_STRUCT
 #   define FFT_ORIENTATION      BUTTON_MENU
 #   define FFT_WINDOW     BUTTON_SELECT
 #   define FFT_SCALE            BUTTON_UP
-#   define FFT_COLOR            BUTTON_DOWN
 #   define FFT_QUIT             BUTTON_BACK
 
 #elif CONFIG_KEYPAD == PHILIPS_HDD1630_PAD
@@ -176,16 +162,15 @@ GREY_INFO_STRUCT
 #   define FFT_ORIENTATION      BUTTON_SELECT
 #   define FFT_WINDOW     BUTTON_MENU
 #   define FFT_SCALE            BUTTON_UP
-#   define FFT_COLOR            BUTTON_DOWN
 #   define FFT_QUIT             BUTTON_POWER
 
 #else
 #error No keymap defined!
 #endif
 
-#include "pluginbitmaps/fft_gradient_horizontal.h"
-#include "pluginbitmaps/fft_gradient_vertical.h"
+#ifdef HAVE_LCD_COLOR
 #include "pluginbitmaps/fft_colors.h"
+#endif
 
 #include "kiss_fftr.h"
 #include "_kiss_fft_guts.h" /* sizeof(struct kiss_fft_state) */
@@ -233,7 +218,6 @@ struct {
     bool logarithmic;
     bool orientation_vertical;
     int window_func;
-    bool colored;
     struct {
         int column;
         int row;
@@ -538,20 +522,6 @@ void draw_lines_vertical(void)
     if (new_max == 0 || max == 0) /* nothing to draw */
         return;
 
-
-    if(graph_settings.colored)
-    {
-#ifdef HAVE_LCD_COLOR
-        rb->lcd_bitmap(fft_gradient_vertical, 0, 0,
-                       BMPWIDTH_fft_gradient_vertical, BMPHEIGHT_fft_gradient_vertical);
-        /* Erase the lines with the background color */
-        rb->lcd_set_foreground(LCD_DEFAULT_BG);
-#else
-        grey_gray_bitmap(fft_gradient_vertical, 0, 0, BMPWIDTH_fft_gradient_vertical, BMPHEIGHT_fft_gradient_vertical);
-        grey_set_foreground(GREY_WHITE);
-#endif
-    }
-
     /* take the average of neighboring bins
      * if we have to scale the graph horizontally */
     int64_t bins_avg = 0;
@@ -591,15 +561,9 @@ void draw_lines_vertical(void)
         if (draw)
         {
 #ifdef HAVE_LCD_COLOR
-            if(graph_settings.colored)
-                rb->lcd_vline(x, 0, LCD_HEIGHT-y-1);
-            else
-                rb->lcd_vline(x, LCD_HEIGHT-1, LCD_HEIGHT-y-1);
+			rb->lcd_vline(x, LCD_HEIGHT-1, LCD_HEIGHT-y-1);
 #else
-            if(graph_settings.colored)
-                grey_vline(x, 0, LCD_HEIGHT-y-1);
-            else
-                grey_vline(x, LCD_HEIGHT-1, LCD_HEIGHT-y-1);
+			grey_vline(x, LCD_HEIGHT-1, LCD_HEIGHT-y-1);
 #endif
         }
     }
@@ -627,19 +591,6 @@ void draw_lines_horizontal(void)
     int32_t hfactor;
 
     hfactor = Q16_DIV((LCD_WIDTH - 1) << 16, max); /* s15.16 */
-
-    if(graph_settings.colored)
-    {
-#ifdef HAVE_LCD_COLOR
-        rb->lcd_bitmap(fft_gradient_horizontal, 0, 0,
-                       BMPWIDTH_fft_gradient_horizontal, BMPHEIGHT_fft_gradient_horizontal);
-        /* Erase the lines with the background color */
-        rb->lcd_set_foreground(LCD_DEFAULT_BG);
-#else
-        grey_gray_bitmap(fft_gradient_horizontal, 0, 0, BMPWIDTH_fft_gradient_horizontal, BMPHEIGHT_fft_gradient_horizontal);
-        grey_set_foreground(GREY_WHITE);
-#endif
-    }
 
     /* take the average of neighboring bins
      * if we have to scale the graph horizontally */
@@ -681,15 +632,9 @@ void draw_lines_horizontal(void)
         if (draw)
         {
 #ifdef HAVE_LCD_COLOR
-            if(graph_settings.colored)
-                rb->lcd_hline(LCD_WIDTH-1, x, y);
-            else
-                rb->lcd_hline(0, x, y);
+			rb->lcd_hline(0, x, y);
 #else
-            if(graph_settings.colored)
-                grey_hline(LCD_WIDTH-1, x, y);
-            else
-                grey_hline(0, x, y);
+			grey_hline(0, x, y);
 #endif
         }
     }
@@ -801,11 +746,15 @@ void draw_bars_horizontal(void)
 
 void draw_spectrogram_vertical(void)
 {
-    const int32_t scale_factor = ARRAYSIZE_PLOT / LCD_HEIGHT,
-        colors_per_val_log = Q16_DIV((COLORS-1) << 16, QLOG_MAX),
-        colors_per_val_lin = Q16_DIV((COLORS-1) << 16, QLIN_MAX),
-		grey_vals_per_val_log = Q16_DIV(255 << 16, QLOG_MAX),
-		grey_vals_per_val_lin = Q16_DIV(255 << 16, QLIN_MAX);
+    const int32_t scale_factor = ARRAYSIZE_PLOT / LCD_HEIGHT
+#ifdef HAVE_LCD_COLOR
+        ,colors_per_val_log = Q16_DIV((COLORS-1) << 16, QLOG_MAX),
+        colors_per_val_lin = Q16_DIV((COLORS-1) << 16, QLIN_MAX)
+#else
+		,grey_vals_per_val_log = Q16_DIV(255 << 16, QLOG_MAX),
+		grey_vals_per_val_lin = Q16_DIV(255 << 16, QLIN_MAX)
+#endif
+		;
 
     const int32_t remaining_div =
         (ARRAYSIZE_PLOT-scale_factor*LCD_HEIGHT) > 0 ?
@@ -904,11 +853,15 @@ void draw_spectrogram_vertical(void)
 
 void draw_spectrogram_horizontal(void)
 {
-    const int32_t scale_factor = ARRAYSIZE_PLOT / LCD_WIDTH,
-         colors_per_val_log = Q16_DIV((COLORS-1) << 16, QLOG_MAX),
-         colors_per_val_lin = Q16_DIV((COLORS-1) << 16, QLIN_MAX),
-		 grey_vals_per_val_log = Q16_DIV(255 << 16, QLOG_MAX),
-		 grey_vals_per_val_lin = Q16_DIV(255 << 16, QLIN_MAX);
+    const int32_t scale_factor = ARRAYSIZE_PLOT / LCD_WIDTH
+#ifdef HAVE_LCD_COLOR
+        ,colors_per_val_log = Q16_DIV((COLORS-1) << 16, QLOG_MAX),
+        colors_per_val_lin = Q16_DIV((COLORS-1) << 16, QLIN_MAX)
+#else
+		,grey_vals_per_val_log = Q16_DIV(255 << 16, QLOG_MAX),
+		grey_vals_per_val_lin = Q16_DIV(255 << 16, QLIN_MAX)
+#endif
+		;
 
     const int32_t remaining_div =
             (ARRAYSIZE_PLOT-scale_factor*LCD_WIDTH) > 0 ?
@@ -1100,7 +1053,6 @@ enum plugin_status plugin_start(const void* parameter)
     graph_settings.changed.mode = false;
     graph_settings.changed.scale = false;
     graph_settings.changed.orientation = false;
-    graph_settings.colored = false;
     graph_settings.spectrogram.row = 0;
     graph_settings.spectrogram.column = 0;
 
@@ -1179,13 +1131,6 @@ enum plugin_status plugin_start(const void* parameter)
                 draw(0);
                 break;
             }
-#       ifdef HAVE_LCD_COLOR
-            case FFT_COLOR: {
-                graph_settings.colored = !graph_settings.colored;
-                draw(0);
-                break;
-            }
-#       endif
             default: {
                 if (rb->default_event_handler(button) == SYS_USB_CONNECTED)
                     return PLUGIN_USB_CONNECTED;
