@@ -638,11 +638,6 @@ void draw_lines_horizontal(void)
 #endif
         }
     }
-#ifdef HAVE_LCD_COLOR
-    rb->lcd_set_foreground(LCD_DEFAULT_FG);
-#else
-    grey_set_foreground(LCD_DEFAULT_FG);
-#endif
 }
 
 void draw_bars_vertical(void)
