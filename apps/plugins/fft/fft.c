@@ -1062,7 +1062,7 @@ enum plugin_status plugin_start(const void* parameter)
         return PLUGIN_ERROR;
     }
 	
-	unsigned int input_thread = rb->create_thread(&input_thread_entry, thread_stack, sizeof(thread_stack), 0, "fft input thread" IF_PRIO(, PRIORITY_BACKGROUND) IF_COP(, CPU));
+	unsigned int input_thread = rb->create_thread(&input_thread_entry, thread_stack, sizeof(thread_stack), 0, "fft input thread" IF_PRIO(, PRIORITY_BACKGROUND) IF_COP(, COP));
 	rb->yield();
     while (run)
     {
