@@ -56,15 +56,18 @@ class TalkGenerator :public QObject
        * 2) we are not guaranteed to go through the list in any particular order, 
        * so we can't use the progress slot for error checking */
       EncBase* encoder;
+      TTSBase* tts;
       TalkGenerator* generator; 
+      int wavtrim;
     };
 
     TalkGenerator(QObject* parent);
     Status process(QList<TalkEntry>* list,int wavtrimth = -1);
 
-    public slots:
-      void abort();
+public slots:
+    void abort();
     void encProgress(int value);
+    void ttsProgress(int value);
 
 signals:
     void done(bool);
@@ -73,17 +76,20 @@ signals:
 
   private:
     QFutureWatcher<void> encFutureWatcher;
+    QFutureWatcher<void> ttsFutureWatcher;
     void encFailEntry(const TalkEntry& entry);
+    void ttsFailEntry(const TalkEntry& entry, TTSStatus status, QString error);
 
     Status voiceList(QList<TalkEntry>* list,int wavetrimth);
     Status encodeList(QList<TalkEntry>* list);
 
     static void encEntryPoint(TalkEntry& entry);
+    static void ttsEntryPoint(TalkEntry& entry);
 
     TTSBase* m_tts;
     EncBase* m_enc;
 
-    bool m_abort;
+    bool m_ttsWarnings;
 };
 
 
