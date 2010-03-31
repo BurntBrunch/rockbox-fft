@@ -53,7 +53,7 @@ class TTSBase : public EncTtsSettingInterface
         //! Chlid class should commit the Settings to permanent storage
         virtual void saveSettings() = 0;
 
-        virtual TTSCapabilities capabilities() = 0;
+        virtual int capabilities() = 0;
         
         // static functions
         static TTSBase* getTTS(QObject* parent,QString ttsname);

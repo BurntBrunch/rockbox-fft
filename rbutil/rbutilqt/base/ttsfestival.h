@@ -42,7 +42,7 @@ class TTSFestival : public TTSBase
         bool start(QString *errStr);
         bool stop();
         TTSStatus voice(QString text,QString wavfile,  QString *errStr);
-        TTSCapabilities capabilities();
+        int capabilities();
 
         // for settings
         bool configOk();

@@ -30,7 +30,7 @@ TTSSapi::TTSSapi(QObject* parent) : TTSBase(parent)
     m_sapi4 =false;
 }
 
-TTSCapabilities TTSSapi::capabilities()
+int TTSSapi::capabilities()
 {
     return None;
 }
