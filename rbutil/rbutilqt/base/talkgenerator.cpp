@@ -166,8 +166,8 @@ void TalkGenerator::ttsEntryPoint(TalkEntry& entry)
             char buffer[255];
             wavtrim(entry.wavfilename.toLocal8Bit().data(),entry.wavtrim,buffer,255);
         }
+        entry.voiced = true;
     }
-    entry.voiced = true;
 }
 
 void TalkGenerator::ttsFailEntry(const TalkEntry& entry, TTSStatus status, QString error)
