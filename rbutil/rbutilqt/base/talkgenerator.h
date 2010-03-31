@@ -49,14 +49,22 @@ public:
         QString target;
         bool voiced;
         bool encoded;
+
+				/* We need the following members because 
+				 * 1) the QtConcurrent entry points are all static methods (and we need to communicate
+				 * with the TalkGenerator
+				 * 2) we are not guaranteed to go through the list in any particular order, 
+				 * so we can't use the progress slot for error checking */
+				EncBase* encoder;
+				TalkGenerator* generator; 
     };
 
     TalkGenerator(QObject* parent);
-
     Status process(QList<TalkEntry>* list,int wavtrimth = -1);
 
 public slots:
     void abort();
+		void encProgress(int value);
 
 signals:
     void done(bool);
@@ -64,13 +72,18 @@ signals:
     void logProgress(int, int); //! set progress bar.
 
 private:
+		QFutureWatcher<void> encFutureWatcher;
+		void encFailEntry(const TalkEntry& entry);
+		
     Status voiceList(QList<TalkEntry>* list,int wavetrimth);
     Status encodeList(QList<TalkEntry>* list);
 
-    TTSBase* m_tts;
-    EncBase* m_enc;
+		static void encEntryPoint(TalkEntry& entry);
 
-    bool m_abort;
+    TTSBase* m_tts;
+		EncBase* m_enc;
+
+		bool m_abort;
 };
 
 
