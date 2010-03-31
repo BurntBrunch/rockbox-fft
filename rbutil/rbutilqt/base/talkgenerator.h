@@ -52,7 +52,7 @@ class TalkGenerator :public QObject
 
       /* We need the following members because 
        * 1) the QtConcurrent entry points are all static methods (and we need to communicate
-       * with the TalkGenerator
+       * with the TalkGenerator)
        * 2) we are not guaranteed to go through the list in any particular order, 
        * so we can't use the progress slot for error checking */
       EncBase* encoder;

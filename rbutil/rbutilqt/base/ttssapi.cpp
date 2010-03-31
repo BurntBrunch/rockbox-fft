@@ -30,6 +30,11 @@ TTSSapi::TTSSapi(QObject* parent) : TTSBase(parent)
     m_sapi4 =false;
 }
 
+TTSCapabilities TTSSapi::capabilities()
+{
+    return None;
+}
+
 void TTSSapi::generateSettings()
 {
     // language

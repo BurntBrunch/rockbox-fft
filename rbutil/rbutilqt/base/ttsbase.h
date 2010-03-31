@@ -32,7 +32,7 @@
 #include "encttssettings.h"
 
 enum TTSStatus{ FatalError, NoError, Warning };
-
+enum TTSCapabilities { None = 0, RunInParallel = 1 };
 class TTSBase : public EncTtsSettingInterface
 {
     Q_OBJECT
@@ -52,6 +52,8 @@ class TTSBase : public EncTtsSettingInterface
         virtual void generateSettings() = 0;
         //! Chlid class should commit the Settings to permanent storage
         virtual void saveSettings() = 0;
+
+        virtual TTSCapabilities capabilities() = 0;
         
         // static functions
         static TTSBase* getTTS(QObject* parent,QString ttsname);

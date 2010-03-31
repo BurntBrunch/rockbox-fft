@@ -53,6 +53,8 @@ class TTSCarbon : public TTSBase
         //! Chlid class should commit the Settings to permanent storage
         void saveSettings();
 
+        TTSCapabilities capabilities();
+
     private:
         SpeechChannel m_channel;
         CFStringBuiltInEncodings m_voiceScript;

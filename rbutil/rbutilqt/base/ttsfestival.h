@@ -42,6 +42,7 @@ class TTSFestival : public TTSBase
         bool start(QString *errStr);
         bool stop();
         TTSStatus voice(QString text,QString wavfile,  QString *errStr);
+        TTSCapabilities capabilities();
 
         // for settings
         bool configOk();
@@ -49,7 +50,7 @@ class TTSFestival : public TTSBase
         void saveSettings();
 
         private slots:
-            void updateVoiceList();
+        void updateVoiceList();
         void updateVoiceDescription();
         void clearVoiceDescription();
     private:
