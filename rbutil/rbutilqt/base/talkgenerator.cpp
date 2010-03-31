@@ -161,7 +161,7 @@ TalkGenerator::Status TalkGenerator::voiceList(QList<TalkEntry>* list,int wavtri
             return eERROR;
         }
         else
-           (*list)[i].voiced = true;
+            (*list)[i].voiced = true;
 
         //wavetrim if needed
         if(wavtrimth != -1)
@@ -186,80 +186,80 @@ TalkGenerator::Status TalkGenerator::encodeList(QList<TalkEntry>* list)
 {
     QStringList duplicates;
 
-	int itemsCount = list->size();
-	emit logProgress(0, itemsCount);
+    int itemsCount = list->size();
+    emit logProgress(0, itemsCount);
 
-	/* Do some preprocessing and remove the invalid entries. As far as I can see,
-	 * this list is not going to be used anywhere else, so we might as well butcher it*/
-	for (int idx=0; idx < itemsCount; idx++)
-	{
-		if(list->at(idx).voiced == false)
+    /* Do some preprocessing and remove the invalid entries. As far as I can see,
+     * this list is not going to be used anywhere else, so we might as well butcher it*/
+    for (int idx=0; idx < itemsCount; idx++)
+    {
+        if(list->at(idx).voiced == false)
         {
             qDebug() << "non voiced entry" << list->at(idx).toSpeak <<"detected";
-			list->removeAt(idx);
-			itemsCount--;
-			idx--;
+            list->removeAt(idx);
+            itemsCount--;
+            idx--;
             continue;
         }
-		if(duplicates.contains(list->at(idx).talkfilename))
-		{
-			list->removeAt(idx);
-			itemsCount--;
-			idx--;
-			continue;
-		}
-		duplicates.append(list->at(idx).talkfilename);
-		(*list)[idx].encoder = m_enc;
-		(*list)[idx].generator = this;
-	}
-	
-	connect(&encFutureWatcher, SIGNAL(progressValueChanged(int)), this, SLOT(encProgress(int)));
-	encFutureWatcher.setFuture(QtConcurrent::map(*list, &TalkGenerator::encEntryPoint));
+        if(duplicates.contains(list->at(idx).talkfilename))
+        {
+            list->removeAt(idx);
+            itemsCount--;
+            idx--;
+            continue;
+        }
+        duplicates.append(list->at(idx).talkfilename);
+        (*list)[idx].encoder = m_enc;
+        (*list)[idx].generator = this;
+    }
 
-	/* We use this loop as an equivalent to encFutureWatcher.waitForFinished() 
-	 * since the latter blocks all events */
-	while (encFutureWatcher.isRunning())
-		QCoreApplication::processEvents(QEventLoop::AllEvents);
+    connect(&encFutureWatcher, SIGNAL(progressValueChanged(int)), this, SLOT(encProgress(int)));
+    encFutureWatcher.setFuture(QtConcurrent::map(*list, &TalkGenerator::encEntryPoint));
 
-	if (encFutureWatcher.isCanceled())
-		return eERROR;
-	else
-	    return eOK;
+    /* We use this loop as an equivalent to encFutureWatcher.waitForFinished() 
+     * since the latter blocks all events */
+    while (encFutureWatcher.isRunning())
+        QCoreApplication::processEvents(QEventLoop::AllEvents);
+
+    if (encFutureWatcher.isCanceled())
+        return eERROR;
+    else
+        return eOK;
 }
 
 void TalkGenerator::encEntryPoint(TalkEntry& entry)
 {
-	bool res = entry.encoder->encode(entry.wavfilename, entry.talkfilename);
-	entry.encoded = res;
-	if (!entry.encoded)
-		entry.generator->encFailEntry(entry);
-	return;
+    bool res = entry.encoder->encode(entry.wavfilename, entry.talkfilename);
+    entry.encoded = res;
+    if (!entry.encoded)
+        entry.generator->encFailEntry(entry);
+    return;
 }
 
 void TalkGenerator::encProgress(int value)
 {
-	qDebug() << "[TalkGen] Progress at " << value; 
-	emit logProgress(value, encFutureWatcher.progressMaximum());
+    qDebug() << "[TalkGen] Progress at " << value; 
+    emit logProgress(value, encFutureWatcher.progressMaximum());
 }
 
 void TalkGenerator::encFailEntry(const TalkEntry& entry)
 {
-	encFutureWatcher.cancel();
-  	encFutureWatcher.waitForFinished();
-	emit logItem(tr("Encoding of %1 failed").arg(entry.wavfilename), LOGERROR);
+    encFutureWatcher.cancel();
+    encFutureWatcher.waitForFinished();
+    emit logItem(tr("Encoding of %1 failed").arg(entry.wavfilename), LOGERROR);
 }
 
 //! \brief slot, which is connected to the abort of the Logger. Sets a flag, so Creating Talkfiles ends at the next possible position
 //!
 void TalkGenerator::abort()
 {
-	m_abort = true;
+    m_abort = true;
 
-	if (encFutureWatcher.isRunning())
-	{
-		encFutureWatcher.cancel();
-		encFutureWatcher.waitForFinished();
-		emit logItem(tr("Encoding aborted"), LOGERROR);
-	}
+    if (encFutureWatcher.isRunning())
+    {
+        encFutureWatcher.cancel();
+        encFutureWatcher.waitForFinished();
+        emit logItem(tr("Encoding aborted"), LOGERROR);
+    }
 }
 
