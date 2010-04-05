@@ -32,11 +32,13 @@
 #include "encttssettings.h"
 
 enum TTSStatus{ FatalError, NoError, Warning };
-enum TTSCapabilities { None = 0, RunInParallel = 1 };
 class TTSBase : public EncTtsSettingInterface
 {
     Q_OBJECT
     public:
+				enum Capability { None = 0, RunInParallel = 1 };
+				Q_DECLARE_FLAGS(Capabilities, Capability)
+
         TTSBase(QObject *parent);
         //! Child class should generate a clip
         virtual TTSStatus voice(QString text,QString wavfile, QString* errStr) =0;
@@ -53,7 +55,7 @@ class TTSBase : public EncTtsSettingInterface
         //! Chlid class should commit the Settings to permanent storage
         virtual void saveSettings() = 0;
 
-        virtual int capabilities() = 0;
+        virtual Capabilities capabilities() = 0;
         
         // static functions
         static TTSBase* getTTS(QObject* parent,QString ttsname);
@@ -67,10 +69,6 @@ class TTSBase : public EncTtsSettingInterface
     protected:
         static QMap<QString,QString> ttsList;
 };
-
-
-
-
-
+Q_DECLARE_OPERATORS_FOR_FLAGS(TTSBase::Capabilities)
 
 #endif

@@ -34,7 +34,7 @@ TTSCarbon::TTSCarbon(QObject* parent) : TTSBase(parent)
 {
 }
 
-int TTSCarbon::capabilities()
+Capabilities TTSCarbon::capabilities()
 {
     return None;
 }

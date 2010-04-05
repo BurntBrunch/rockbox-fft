@@ -38,7 +38,7 @@ class TTSExes : public TTSBase
         TTSStatus voice(QString text, QString wavfile, QString *errStr);
         bool start(QString *errStr);
         bool stop() {return true;}
-        int capabilities();
+        Capabilities capabilities();
 
         // for settings
         void generateSettings();

@@ -31,7 +31,7 @@ TTSExes::TTSExes(QString name,QObject* parent) : TTSBase(parent)
 
 }
 
-int TTSExes::capabilities()
+TTSBase::Capabilities TTSExes::capabilities()
 {
     return RunInParallel;
 }

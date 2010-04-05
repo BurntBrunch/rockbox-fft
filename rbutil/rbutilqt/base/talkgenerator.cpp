@@ -126,7 +126,7 @@ TalkGenerator::Status TalkGenerator::voiceList(QList<TalkEntry>* list,int wavtri
 
     /* If the engine can't be parallelized, we use only 1 thread */
     int maxThreadCount = QThreadPool::globalInstance()->maxThreadCount();
-    if ((m_tts->capabilities() & RunInParallel) == 0)
+    if ((m_tts->capabilities() & TTSBase::RunInParallel) == 0)
         QThreadPool::globalInstance()->setMaxThreadCount(1);
 
     connect(&ttsFutureWatcher, SIGNAL(progressValueChanged(int)), this, SLOT(ttsProgress(int)));
@@ -138,7 +138,7 @@ TalkGenerator::Status TalkGenerator::voiceList(QList<TalkEntry>* list,int wavtri
         QCoreApplication::processEvents();
     
     /* Restore global settings, if we changed them */
-    if ((m_tts->capabilities() & RunInParallel) == 0)
+    if ((m_tts->capabilities() & TTSBase::RunInParallel) == 0)
         QThreadPool::globalInstance()->setMaxThreadCount(maxThreadCount);
 
     if(ttsFutureWatcher.isCanceled())

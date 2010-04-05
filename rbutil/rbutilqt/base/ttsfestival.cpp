@@ -27,7 +27,7 @@ TTSFestival::~TTSFestival()
     stop();
 }
 
-int TTSFestival::capabilities()
+TTSBase::Capabilities TTSFestival::capabilities()
 {
     return RunInParallel;
 }

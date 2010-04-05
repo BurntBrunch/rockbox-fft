@@ -53,7 +53,7 @@ class TTSCarbon : public TTSBase
         //! Chlid class should commit the Settings to permanent storage
         void saveSettings();
 
-        int capabilities();
+        Capabilities capabilities();
 
     private:
         SpeechChannel m_channel;
