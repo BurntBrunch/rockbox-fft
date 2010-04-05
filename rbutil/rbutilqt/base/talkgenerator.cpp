@@ -110,8 +110,8 @@ TalkGenerator::Status TalkGenerator::voiceList(QList<TalkEntry>* list,int wavtri
     m_ttsWarnings = false;
     for(int i=0; i < list->size(); i++)
     {
-        (*list)[i].tts = m_tts;
-        (*list)[i].wavtrim = wavtrimth;
+        (*list)[i].refs.tts = m_tts;
+        (*list)[i].refs.wavtrim = wavtrimth;
             
         // skip duplicated wav entrys
         if(!duplicates.contains(list->at(i).wavfilename))
@@ -155,16 +155,16 @@ void TalkGenerator::ttsEntryPoint(TalkEntry& entry)
     {
         QString error;
         qDebug() << "[TalkGen] voicing: " << entry.toSpeak << "to" << entry.wavfilename;
-        TTSStatus status = entry.tts->voice(entry.toSpeak,entry.wavfilename, &error);
+        TTSStatus status = entry.refs.tts->voice(entry.toSpeak,entry.wavfilename, &error);
         if (status == Warning || status == FatalError)
         {
-            entry.generator->ttsFailEntry(entry, status, error);
+            entry.refs.generator->ttsFailEntry(entry, status, error);
             return;
         }
-        if (entry.wavtrim != -1)
+        if (entry.refs.wavtrim != -1)
         {
             char buffer[255];
-            wavtrim(entry.wavfilename.toLocal8Bit().data(),entry.wavtrim,buffer,255);
+            wavtrim(entry.wavfilename.toLocal8Bit().data(), entry.refs.wavtrim, buffer, 255);
         }
         entry.voiced = true;
     }
@@ -220,8 +220,8 @@ TalkGenerator::Status TalkGenerator::encodeList(QList<TalkEntry>* list)
             continue;
         }
         duplicates.append(list->at(idx).talkfilename);
-        (*list)[idx].encoder = m_enc;
-        (*list)[idx].generator = this;
+        (*list)[idx].refs.encoder = m_enc;
+        (*list)[idx].refs.generator = this;
     }
 
     connect(&encFutureWatcher, SIGNAL(progressValueChanged(int)), this, SLOT(encProgress(int)));
@@ -240,10 +240,10 @@ TalkGenerator::Status TalkGenerator::encodeList(QList<TalkEntry>* list)
 
 void TalkGenerator::encEntryPoint(TalkEntry& entry)
 {
-    bool res = entry.encoder->encode(entry.wavfilename, entry.talkfilename);
+    bool res = entry.refs.encoder->encode(entry.wavfilename, entry.talkfilename);
     entry.encoded = res;
     if (!entry.encoded)
-        entry.generator->encFailEntry(entry);
+        entry.refs.generator->encFailEntry(entry);
     return;
 }
 

@@ -55,10 +55,13 @@ class TalkGenerator :public QObject
        * with the TalkGenerator)
        * 2) we are not guaranteed to go through the list in any particular order, 
        * so we can't use the progress slot for error checking */
-      EncBase* encoder;
-      TTSBase* tts;
-      TalkGenerator* generator; 
-      int wavtrim;
+			struct
+			{
+      	EncBase* encoder;
+      	TTSBase* tts;
+      	TalkGenerator* generator; 
+      	int wavtrim;
+			} refs;
     };
 
     TalkGenerator(QObject* parent);
