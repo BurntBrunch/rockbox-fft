@@ -36,32 +36,32 @@ class TTSBase : public EncTtsSettingInterface
 {
     Q_OBJECT
     public:
-				enum Capability { None = 0, RunInParallel = 1 };
-				Q_DECLARE_FLAGS(Capabilities, Capability)
+        enum Capability { None = 0, RunInParallel = 1 };
+        Q_DECLARE_FLAGS(Capabilities, Capability)
 
-        TTSBase(QObject *parent);
+            TTSBase(QObject *parent);
         //! Child class should generate a clip
         virtual TTSStatus voice(QString text,QString wavfile, QString* errStr) =0;
         //! Child class should do startup
         virtual bool start(QString *errStr) =0;
         //! child class should stop
         virtual bool stop() =0;
-        
+
         // configuration
         //! Child class should return true, when configuration is good
         virtual bool configOk()=0;        
-         //! Child class should generate and insertSetting(..) its settings
+        //! Child class should generate and insertSetting(..) its settings
         virtual void generateSettings() = 0;
         //! Chlid class should commit the Settings to permanent storage
         virtual void saveSettings() = 0;
 
         virtual Capabilities capabilities() = 0;
-        
+
         // static functions
         static TTSBase* getTTS(QObject* parent,QString ttsname);
         static QStringList getTTSList();
         static QString getTTSName(QString tts); 
-                
+
     private:
         //inits the tts List
         static void initTTSList();

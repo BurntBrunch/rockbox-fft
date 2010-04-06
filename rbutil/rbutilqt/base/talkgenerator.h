@@ -51,17 +51,18 @@ class TalkGenerator :public QObject
       bool encoded;
 
       /* We need the following members because 
-       * 1) the QtConcurrent entry points are all static methods (and we need to communicate
-       * with the TalkGenerator)
-       * 2) we are not guaranteed to go through the list in any particular order, 
-       * so we can't use the progress slot for error checking */
-			struct
-			{
-      	EncBase* encoder;
-      	TTSBase* tts;
-      	TalkGenerator* generator; 
-      	int wavtrim;
-			} refs;
+       * 1) the QtConcurrent entry points are all static methods (and we 
+       * need to communicate with the TalkGenerator)
+       * 2) we are not guaranteed to go through the list in any 
+       * particular order, so we can't use the progress slot 
+       * for error checking */
+      struct
+      {
+        EncBase* encoder;
+        TTSBase* tts;
+        TalkGenerator* generator; 
+        int wavtrim;
+      } refs;
     };
 
     TalkGenerator(QObject* parent);
