@@ -112,8 +112,9 @@ TalkGenerator::Status TalkGenerator::voiceList(QList<TalkEntry>* list,int wavtri
     {
         (*list)[i].refs.tts = m_tts;
         (*list)[i].refs.wavtrim = wavtrimth;
-            
-        // skip duplicated wav entrys
+        (*list)[i].refs.generator = this;
+
+        // skip duplicated wav entries
         if(!duplicates.contains(list->at(i).wavfilename))
             duplicates.append(list->at(i).wavfilename);
         else
@@ -129,14 +130,15 @@ TalkGenerator::Status TalkGenerator::voiceList(QList<TalkEntry>* list,int wavtri
     if ((m_tts->capabilities() & TTSBase::RunInParallel) == 0)
         QThreadPool::globalInstance()->setMaxThreadCount(1);
 
-    connect(&ttsFutureWatcher, SIGNAL(progressValueChanged(int)), this, SLOT(ttsProgress(int)));
+    connect(&ttsFutureWatcher, SIGNAL(progressValueChanged(int)), 
+            this, SLOT(ttsProgress(int)));
     ttsFutureWatcher.setFuture(QtConcurrent::map(*list, &TalkGenerator::ttsEntryPoint));
 
     /* We use this loop as an equivalent to ttsFutureWatcher.waitForFinished() 
      * since the latter blocks all events */
     while(ttsFutureWatcher.isRunning())
         QCoreApplication::processEvents();
-    
+
     /* Restore global settings, if we changed them */
     if ((m_tts->capabilities() & TTSBase::RunInParallel) == 0)
         QThreadPool::globalInstance()->setMaxThreadCount(maxThreadCount);
@@ -176,12 +178,12 @@ void TalkGenerator::ttsFailEntry(const TalkEntry& entry, TTSStatus status, QStri
     {
         m_ttsWarnings = true;
         emit logItem(tr("Voicing of %1 failed: %2").arg(entry.toSpeak).arg(error),
-                    LOGWARNING);
+                LOGWARNING);
     }
     else if (status == FatalError)
     {
         emit logItem(tr("Voicing of %1 failed: %2").arg(entry.toSpeak).arg(error),
-                    LOGERROR);
+                LOGERROR);
         abort();
     }
 }
@@ -200,13 +202,12 @@ TalkGenerator::Status TalkGenerator::encodeList(QList<TalkEntry>* list)
     int itemsCount = list->size();
     emit logProgress(0, itemsCount);
 
-    /* Do some preprocessing and remove the invalid entries. As far as I can see,
-     * this list is not going to be used anywhere else, so we might as well butcher it*/
+    /* Do some preprocessing and remove entries that have not been voiced. */
     for (int idx=0; idx < itemsCount; idx++)
     {
         if(list->at(idx).voiced == false)
         {
-            qDebug() << "non voiced entry" << list->at(idx).toSpeak <<"detected";
+            qDebug() << "[TalkGen] unvoiced entry" << list->at(idx).toSpeak <<"detected";
             list->removeAt(idx);
             itemsCount--;
             idx--;
@@ -214,17 +215,18 @@ TalkGenerator::Status TalkGenerator::encodeList(QList<TalkEntry>* list)
         }
         if(duplicates.contains(list->at(idx).talkfilename))
         {
-            list->removeAt(idx);
-            itemsCount--;
-            idx--;
+            (*list)[idx].encoded = true; /* make sure we skip this entry */
             continue;
         }
         duplicates.append(list->at(idx).talkfilename);
         (*list)[idx].refs.encoder = m_enc;
-        (*list)[idx].refs.generator = this;
+        (*list)[idx].refs.generator = this; /* not really needed, unless we end up 
+                                               voicing and encoding with two different
+                                               TalkGenerators.*/
     }
 
-    connect(&encFutureWatcher, SIGNAL(progressValueChanged(int)), this, SLOT(encProgress(int)));
+    connect(&encFutureWatcher, SIGNAL(progressValueChanged(int)), 
+            this, SLOT(encProgress(int)));
     encFutureWatcher.setFuture(QtConcurrent::map(*list, &TalkGenerator::encEntryPoint));
 
     /* We use this loop as an equivalent to encFutureWatcher.waitForFinished() 
@@ -240,10 +242,13 @@ TalkGenerator::Status TalkGenerator::encodeList(QList<TalkEntry>* list)
 
 void TalkGenerator::encEntryPoint(TalkEntry& entry)
 {
-    bool res = entry.refs.encoder->encode(entry.wavfilename, entry.talkfilename);
-    entry.encoded = res;
-    if (!entry.encoded)
-        entry.refs.generator->encFailEntry(entry);
+    if(!entry.encoded)
+    {
+        bool res = entry.refs.encoder->encode(entry.wavfilename, entry.talkfilename);
+        entry.encoded = res;
+        if (!entry.encoded)
+            entry.refs.generator->encFailEntry(entry);
+    }
     return;
 }
 
